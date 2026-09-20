@@ -15,7 +15,7 @@ function onlyActive(levels, id) {
 function lightData(data, level) {
   const levels = levelsOf(data);
   const out = {};
-  if (onlyActive(levels, level.id)) out.levels = [];
+  if (levels.length === 1) out.levels = [];
   if (levels.length <= 1 && data.elevation !== level.elevation.bottom) out.elevation = level.elevation.bottom;
   return Object.keys(out).length ? out : null;
 }
@@ -40,13 +40,13 @@ class AutoTag {
     return kind === "light" ? lightData(data, level) : taggedData(kind, data, level);
   }
 
-  onPreCreate(kind, document, data, options, userId) {
+  onPreCreate(kind, doc, data, options, userId) {
     if (userId !== game.user.id || !this.#enabled() || !getSetting(SETTINGS.AUTO_TAG)) return;
     view.sync();
     const level = view.activeLevel;
     if (!level) return;
     const changes = this.tagData(kind, data, level);
-    if (changes) document.updateSource(changes);
+    if (changes) doc.updateSource(changes);
   }
 }
 

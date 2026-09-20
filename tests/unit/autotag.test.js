@@ -19,6 +19,7 @@ test("light forced untagged with elevation", () => {
   expect(autotag.tagData("light", { levels: [], elevation: 10 }, level)).toBeNull();
   expect(autotag.tagData("light", { levels: ["f1", "f2"], elevation: 10 }, level)).toBeNull();
   expect(autotag.tagData("light", { levels: [] }, level)).toEqual({ elevation: 10 });
+  expect(autotag.tagData("light", { levels: ["f2"], elevation: 10 }, level)).toEqual({ levels: [] });
 });
 
 test("onPreCreate respects predicate, setting, user", () => {
