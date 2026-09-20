@@ -16,6 +16,23 @@
       "TargetMissing": "The stair target level no longer exists.",
       "SurfaceMissing": "Draw the floor footprint first, then cut holes.",
       "WriteFailed": "Floorer could not update the surface regions."
+    },
+    "Setup": {
+      "Title": "Set up levels",
+      "FloorsAbove": "Floors above ground",
+      "Basements": "Basements",
+      "Roof": "Add a roof level",
+      "FloorHeight": "Floor height",
+      "GroundBottom": "Ground floor bottom elevation",
+      "Images": "Floor images (one per line, bottom to top)",
+      "ImagesHint": "Basements first, then ground floor upward, then roof. Leave a line blank to skip.",
+      "AddImage": "Add image",
+      "Submit": "Create levels",
+      "NoLevels": "Add at least one floor, basement or roof.",
+      "ConflictTitle": "Existing levels differ",
+      "Conflict": "These Floorer-managed levels do not match the new bands: {names}. Keep them and add only the new levels, or replace them?",
+      "Keep": "Keep existing",
+      "Replace": "Replace"
     }
   }
 }
