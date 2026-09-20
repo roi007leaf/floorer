@@ -5,6 +5,16 @@
       "mirrorHoles": { "Name": "Mirror holes into the level below", "Hint": "When a hole or stair is cut into a floor, cut the same opening into the ceiling of the level below." },
       "autoTag": { "Name": "Auto-tag new placeables to the active level", "Hint": "Walls, tiles, sounds and notes placed while Floorer is open are tagged to the active level. Lights get elevation only and stay untagged so light spills through openings." },
       "sealBasements": { "Name": "Seal basements by default", "Hint": "Generated basement levels see only themselves." }
+    },
+    "Intent": {
+      "Armed": {
+        "footprint": "Draw the floor footprint for {level}. Esc to cancel.",
+        "hole": "Draw a hole in the floor of {level}. Esc to cancel.",
+        "stair": "Draw the stair area on {level}. Esc to cancel."
+      },
+      "LevelMissing": "That level no longer exists.",
+      "TargetMissing": "The stair target level no longer exists.",
+      "SurfaceMissing": "Draw the floor footprint first, then cut holes."
     }
   }
 }
