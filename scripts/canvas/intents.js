@@ -9,6 +9,10 @@ function notify(kind, key, data) {
   ui.notifications?.[kind](game.i18n.format(key, data));
 }
 
+function levelName(levelId) {
+  return canvas.scene?.levels?.get(levelId)?.name ?? levelId;
+}
+
 function beforeOf(scene, updates) {
   return updates.map((u) => {
     const doc = scene.regions.get(u._id);
@@ -43,7 +47,7 @@ class Intents {
   arm(intent) {
     this.#current = { ...intent };
     canvas.regions?.activate({ tool: intent.tool });
-    notify("info", `FLOORER.Intent.Armed.${intent.kind}`, { level: intent.levelId });
+    notify("info", `FLOORER.Intent.Armed.${intent.kind}`, { level: levelName(intent.levelId) });
     this.#emit();
   }
 
@@ -92,7 +96,7 @@ class Intents {
     const updates = holeUpdates(entry, shapes, INTENTS.HOLE);
     if (!updates.length) return this.#abort("FLOORER.Intent.SurfaceMissing");
     if (!getSetting(SETTINGS.MIRROR_HOLES)) updates.splice(1);
-    applyHoleUpdates(canvas.scene, updates);
+    applyHoleUpdates(canvas.scene, updates).catch(() => notify("error", "FLOORER.Intent.WriteFailed", {}));
     return false;
   }
 

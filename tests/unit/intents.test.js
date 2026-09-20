@@ -31,6 +31,12 @@ test("arm stores intent and activates tool", () => {
   expect(canvas.regions.activate).toHaveBeenCalledWith({ tool: "polygon" });
 });
 
+test("arm notifies with resolved level name", () => {
+  canvas.scene = { levels: { get: () => ({ name: "Ground" }) } };
+  intents.arm({ kind: "footprint", levelId: "f1", tool: "polygon" });
+  expect(ui.notifications.info).toHaveBeenCalledWith(expect.stringContaining("Ground"));
+});
+
 test("footprint adoption rewrites create data and clears", () => {
   const f1 = L("f1", 0, 10, ["f1", "f2"]);
   const f2 = L("f2", 10, 20, ["f1", "f2"]);
@@ -66,6 +72,19 @@ test("hole adoption cancels creation and updates surfaces", async () => {
   expect(updates.map((u) => u._id)).toEqual(["s1", "sb"]);
   expect(updates[0].shapes[1].hole).toBe(true);
   expect(journal.size).toBe(1);
+});
+
+test("hole adoption surfaces error when write fails", async () => {
+  const b = L("b", -10, 0, ["b"]);
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const s = scene([b, f1], [S("sb", "b"), S("s1", "f1")]);
+  s.updateEmbeddedDocuments = jest.fn(async () => {
+    throw new Error("boom");
+  });
+  intents.arm({ kind: "hole", levelId: "f1", tool: "rectangle" });
+  intents.onPreCreateRegion({ updateSource: jest.fn() }, { shapes: [rect] }, {}, "gm1");
+  await new Promise((r) => setTimeout(r, 0));
+  expect(ui.notifications.error).toHaveBeenCalled();
 });
 
 test("hole adoption without surface warns and cancels", () => {

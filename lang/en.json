@@ -14,7 +14,8 @@
       },
       "LevelMissing": "That level no longer exists.",
       "TargetMissing": "The stair target level no longer exists.",
-      "SurfaceMissing": "Draw the floor footprint first, then cut holes."
+      "SurfaceMissing": "Draw the floor footprint first, then cut holes.",
+      "WriteFailed": "Floorer could not update the surface regions."
     }
   }
 }
