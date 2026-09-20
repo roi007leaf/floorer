@@ -1,5 +1,10 @@
 {
   "FLOORER": {
-    "Title": "Floorer"
+    "Title": "Floorer",
+    "Settings": {
+      "mirrorHoles": { "Name": "Mirror holes into the level below", "Hint": "When a hole or stair is cut into a floor, cut the same opening into the ceiling of the level below." },
+      "autoTag": { "Name": "Auto-tag new placeables to the active level", "Hint": "Walls, tiles, sounds and notes placed while Floorer is open are tagged to the active level. Lights get elevation only and stay untagged so light spills through openings." },
+      "sealBasements": { "Name": "Seal basements by default", "Hint": "Generated basement levels see only themselves." }
+    }
   }
 }
