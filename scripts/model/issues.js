@@ -1,4 +1,4 @@
-import { findLevel, orderPair, surfaceLevels } from "./floor-plan.js";
+import { findLevel, isManaged, orderPair, surfaceLevels } from "./floor-plan.js";
 import { holeAppendData } from "./holes.js";
 
 export function sameSet(a, b) {
@@ -24,6 +24,7 @@ function surfaceIssues(entry, allLevels) {
   const level = entry.level;
   if (!entry.surface) return [issue("surface-missing", level.id, null, { intent: "footprint", levelId: level.id })];
   const s = entry.surface;
+  if (!isManaged(s)) return [];
   const want = surfaceLevels(level, allLevels);
   if (!sameSet(s.levels, want)) out.push(issue("surface-levels", level.id, s.id, { collection: "regions", op: "update", data: { _id: s.id, levels: want } }));
   if (!sameBand(s.elevation, level)) out.push(issue("surface-band", level.id, s.id, { collection: "regions", op: "update", data: bandData(s.id, level) }));
@@ -41,7 +42,7 @@ function mirroredIds(surface) {
 
 function holeIssues(entry) {
   const below = entry.below;
-  if (!entry.surface || !below?.surface || !below.managed) return [];
+  if (!entry.surface || !isManaged(entry.surface) || !below?.surface || !isManaged(below.surface)) return [];
   const holes = entry.surface.flags?.floorer?.holes ?? [];
   const shapes = holeShapes(entry.surface);
   const done = mirroredIds(below.surface);
@@ -54,6 +55,7 @@ function holeIssues(entry) {
 
 function stairIssues(entry, plan) {
   return entry.stairs.flatMap((stair) => {
+    if (!isManaged(stair)) return [];
     const flag = stair.flags.floorer;
     const target = findLevel(plan, flag.targetLevelId);
     if (!target) return [issue("stair-target-missing", entry.level.id, stair.id, { prompt: "stair-target", docId: stair.id })];

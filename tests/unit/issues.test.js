@@ -94,6 +94,37 @@ test("stair-target-missing", () => {
   expect(issue.fix).toEqual({ prompt: "stair-target", docId: "st" });
 });
 
+test("unmanaged surface with wrong levels yields no surface-levels issue", () => {
+  const s1 = S("s1", "f1", { levels: ["f1"], elevation: { bottom: 0, top: 10 } });
+  s1.flags.floorer.managed = false;
+  const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [
+    s1,
+    S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 } }),
+  ] });
+  expect(ids(lint(plan))).not.toContain("surface-levels");
+});
+
+test("hole on managed surface whose below surface is unmanaged yields no hole-unmirrored", () => {
+  const hole = { type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: true };
+  const s2 = S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 }, holes: [{ id: "h1" }] });
+  s2.shapes = [hole];
+  const s1 = S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } });
+  s1.flags.floorer.managed = false;
+  const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [s1, s2] });
+  expect(ids(lint(plan))).not.toContain("hole-unmirrored");
+});
+
+test("unmanaged stair with wrong levels yields no stair-levels issue", () => {
+  const st = ST("st", "f1", "f2", { levels: ["f1"], elevation: { bottom: 0, top: 10 } });
+  st.flags.floorer.managed = false;
+  const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [
+    S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
+    S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 } }),
+    st,
+  ] });
+  expect(ids(lint(plan))).not.toContain("stair-levels");
+});
+
 test("level-overlap has no fix", () => {
   const plan = buildFloorPlan({ levels: [L("a", 0, 10, ["a"]), L("b", 5, 15, ["b"])], regions: [
     S("sa", "a", { levels: ["a"], elevation: { bottom: 0, top: 10 } }),
