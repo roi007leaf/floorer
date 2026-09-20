@@ -62,7 +62,7 @@
       <button type="button" data-action="fixAll">{{localize "FLOORER.Panel.FixAll"}}</button>
       <ul>
         {{#each issues}}
-          <li>{{localize label}} {{#if fixable}}<button type="button" data-action="fix" data-issue-key="{{id}}:{{levelId}}:{{docId}}">{{localize "FLOORER.Panel.Fix"}}</button>{{/if}}</li>
+          <li>{{localize label}} {{#if fixable}}<button type="button" data-action="fix" data-issue-key="{{key}}">{{localize "FLOORER.Panel.Fix"}}</button>{{/if}}</li>
         {{/each}}
       </ul>
     {{else}}

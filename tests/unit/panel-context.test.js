@@ -1,4 +1,4 @@
-import { panelContext } from "../../scripts/ui/panel-actions.js";
+import { issueKey, panelContext } from "../../scripts/ui/panel-actions.js";
 import { buildFloorPlan } from "../../scripts/model/floor-plan.js";
 
 const L = (id, bottom, top, vis, kind = "floor") => ({ id, _id: id, name: id, elevation: { bottom, top }, visibility: { levels: new Set(vis) }, flags: { floorer: { role: "level", kind, managed: true } } });
@@ -16,5 +16,10 @@ test("panelContext rows", () => {
   expect(ctx.rows[0].band).toBe("10–∞");
   expect(ctx.rows[2].sealed).toBe(true);
   expect(ctx.issues[0].fixable).toBe(true);
+  expect(ctx.issues[0].key).toBe("surface-missing:b:");
   expect(ctx.journalSize).toBe(2);
+});
+
+test("issueKey handles a present docId", () => {
+  expect(issueKey({ id: "x", levelId: "l", docId: "d" })).toBe("x:l:d");
 });

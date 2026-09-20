@@ -8,7 +8,7 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyFix, armDraw, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyFix, armDraw, issueKey, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
@@ -140,7 +140,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onFix(_event, target) {
     const plan = this.plan;
-    const issue = lint(plan).find((i) => `${i.id}:${i.levelId}:${i.docId}` === target.dataset.issueKey);
+    const issue = lint(plan).find((i) => issueKey(i) === target.dataset.issueKey);
     if (issue) await applyFix(canvas.scene, issue, plan);
   }
 

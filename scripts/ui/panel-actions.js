@@ -33,11 +33,15 @@ function row(entry, plan, activeLevelId) {
   };
 }
 
+export function issueKey(issue) {
+  return `${issue.id}:${issue.levelId}:${issue.docId ?? ""}`;
+}
+
 export function panelContext(plan, { activeLevelId, issues, intent, journalSize, isolationEnabled }) {
   return {
     sceneName: plan.scene?.name ?? "",
     rows: plan.levels.map((e) => row(e, plan, activeLevelId)).reverse(),
-    issues: issues.map((i) => ({ ...i, fixable: !!i.fix })),
+    issues: issues.map((i) => ({ ...i, fixable: !!i.fix, key: issueKey(i) })),
     intent,
     journalSize,
     isolationEnabled,
