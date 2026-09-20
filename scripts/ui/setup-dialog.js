@@ -1,21 +1,17 @@
 import { MODULE_ID, SETTINGS } from "../constants.js";
 import { getSetting } from "../settings.js";
-import { applyLevels } from "./apply-levels.js";
+import { applyLevels, parseImages } from "./apply-levels.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
-
-function parseImages(raw) {
-  return raw.split("\n").map((s) => s.trim()).filter(Boolean);
-}
 
 function readForm(form) {
   const fd = new FormData(form);
   return {
-    floorsAbove: Number(fd.get("floorsAbove")),
-    basements: Number(fd.get("basements")),
+    floorsAbove: Math.max(0, Math.floor(Number(fd.get("floorsAbove")) || 0)),
+    basements: Math.max(0, Math.floor(Number(fd.get("basements")) || 0)),
     roof: fd.get("roof") === "on",
-    floorHeight: Number(fd.get("floorHeight")),
-    groundBottom: Number(fd.get("groundBottom")),
+    floorHeight: Math.max(1, Number(fd.get("floorHeight")) || 1),
+    groundBottom: Number(fd.get("groundBottom")) || 0,
     images: parseImages(fd.get("images") ?? ""),
   };
 }
@@ -67,7 +63,7 @@ export class SetupDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const picker = new foundry.applications.apps.FilePicker.implementation({
       type: "image",
       callback: (path) => {
-        textarea.value = `${textarea.value.trim()}\n${path}`.trim();
+        textarea.value = textarea.value ? `${textarea.value}\n${path}` : path;
       },
     });
     picker.render(true);

@@ -1,4 +1,4 @@
-import { planLevelChanges } from "../../scripts/ui/apply-levels.js";
+import { planLevelChanges, parseImages } from "../../scripts/ui/apply-levels.js";
 
 const L = (id, bottom, top, managed) => ({ id, _id: id, name: id, elevation: { bottom, top }, flags: managed === undefined ? {} : { floorer: { role: "level", managed } } });
 const opts = { floorsAbove: 2, basements: 0, roof: false, floorHeight: 10, groundBottom: 0, images: ["a.webp", "b.webp"] };
@@ -17,4 +17,10 @@ test("matching band reused, managed mismatch conflicts, unmanaged ignored", () =
   expect(out.reuse[0].existing.id).toBe("x");
   expect(out.reuse[0].data.background.src).toBe("a.webp");
   expect(out.conflicts.map((c) => c.id)).toEqual(["y"]);
+});
+
+test("parseImages keeps interior blank lines, drops trailing blanks", () => {
+  expect(parseImages("a.webp\n\nb.webp")).toEqual(["a.webp", "", "b.webp"]);
+  expect(parseImages("a.webp\n\n")).toEqual(["a.webp"]);
+  expect(parseImages("")).toEqual([]);
 });

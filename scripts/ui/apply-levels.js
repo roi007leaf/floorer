@@ -8,6 +8,12 @@ function sameBand(a, b) {
   return a.bottom === b.bottom && (a.top ?? null) === (b.top ?? null);
 }
 
+export function parseImages(raw) {
+  const lines = raw.split("\n").map((s) => s.trim());
+  while (lines.length && lines[lines.length - 1] === "") lines.pop();
+  return lines;
+}
+
 export function planLevelChanges(scene, opts) {
   const existing = Array.from(scene.levels ?? []);
   const generated = generateLevelData(opts);
