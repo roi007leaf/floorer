@@ -4,6 +4,7 @@ import { view } from "./canvas/view.js";
 import { autotag } from "./canvas/autotag.js";
 import { isolation } from "./canvas/isolation.js";
 import { intents } from "./canvas/intents.js";
+import { registerControls } from "./ui/controls.js";
 
 let escBound = false;
 
@@ -34,6 +35,7 @@ Hooks.on("createRegion", (doc, options, userId) => {
   intents.onCreateRegion(doc, options, userId);
 });
 Hooks.on("activateSceneControls", () => intents.clear());
+Hooks.on("getSceneControlButtons", registerControls);
 
 for (const hook of ["refreshRegion", "refreshWall", "refreshAmbientLight", "refreshAmbientSound"]) {
   Hooks.on(hook, (placeable) => {

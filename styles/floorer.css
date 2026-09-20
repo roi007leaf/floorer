@@ -1,2 +1,18 @@
 .floorer .form-group.stacked { flex-direction: column; align-items: stretch; }
 .floorer textarea { font-family: monospace; }
+
+.floorer-panel .floorer-head { display: flex; gap: 6px; align-items: center; padding: 4px 6px; }
+.floorer-panel .floorer-head .scene { flex: 1; font-weight: bold; }
+.floorer-panel .floorer-intent { background: rgba(255, 200, 0, 0.15); padding: 4px 6px; display: flex; gap: 6px; align-items: center; }
+.floorer-panel .floorer-levels { list-style: none; margin: 0; padding: 0; }
+.floorer-panel .level .row-head { display: flex; gap: 6px; align-items: center; padding: 4px 6px; cursor: pointer; }
+.floorer-panel .level.active .row-head { background: rgba(0, 120, 255, 0.15); }
+.floorer-panel .level.unmanaged .row-head { opacity: 0.6; }
+.floorer-panel .row-head input { flex: 1; }
+.floorer-panel .row-head .band { font-family: monospace; }
+.floorer-panel .row-body { padding: 4px 6px 6px 24px; display: flex; flex-direction: column; gap: 4px; }
+.floorer-panel .row-body .line { display: flex; gap: 4px; align-items: center; }
+.floorer-panel .row-body .line > span:first-child { min-width: 80px; }
+.floorer-panel .floorer-foot { border-top: 1px solid var(--color-border-light-primary); padding: 4px 6px; display: flex; flex-direction: column; gap: 4px; }
+.floorer-panel .issues ul { margin: 2px 0 0 0; padding-left: 16px; font-size: 0.9em; }
+.floorer-panel .journal { display: flex; gap: 4px; }

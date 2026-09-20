@@ -1,0 +1,76 @@
+<header class="floorer-head">
+  <span class="scene">{{sceneName}}</span>
+  <button type="button" data-action="setup"><i class="fas fa-layer-group"></i> {{localize "FLOORER.Panel.Setup"}}</button>
+  <label class="iso"><input type="checkbox" data-action="toggleIsolation" {{#if isolationEnabled}}checked{{/if}}> {{localize "FLOORER.Panel.Isolation"}}</label>
+</header>
+
+{{#if intent}}
+<div class="floorer-intent">
+  <i class="fas fa-pencil"></i> {{localize (concat "FLOORER.Intent.Armed." intent.kind) level=intent.levelId}}
+  <button type="button" data-action="cancelIntent">{{localize "Cancel"}}</button>
+</div>
+{{/if}}
+
+<ol class="floorer-levels">
+{{#each rows}}
+  <li class="level {{#if active}}active{{/if}} {{#unless managed}}unmanaged{{/unless}}">
+    <div class="row-head" data-action="activate" data-level-id="{{id}}">
+      <i class="fas {{#if active}}fa-caret-down{{else}}fa-caret-right{{/if}}"></i>
+      <input type="text" data-rename="{{id}}" value="{{name}}" {{#unless managed}}disabled{{/unless}}>
+      <span class="band">{{band}}</span>
+      <span class="badges">
+        {{#if hasSurface}}<i class="fas fa-square" title="{{localize 'FLOORER.Panel.HasSurface'}}"></i>{{else}}<i class="far fa-square" title="{{localize 'FLOORER.Panel.NoSurface'}}"></i>{{/if}}
+        {{#if stairCount}}<span title="{{localize 'FLOORER.Panel.Stairs'}}"><i class="fas fa-stairs"></i>{{stairCount}}</span>{{/if}}
+        {{#if sealed}}<i class="fas fa-lock" title="{{localize 'FLOORER.Panel.Sealed'}}"></i>{{/if}}
+      </span>
+    </div>
+    {{#if active}}
+    <div class="row-body">
+      {{#if managed}}
+      <div class="line">
+        <span>{{localize "FLOORER.Panel.Footprint"}}</span>
+        <button type="button" data-action="drawFootprint" data-level-id="{{id}}"><i class="fas fa-draw-polygon"></i></button>
+        <button type="button" data-action="drawRect" data-level-id="{{id}}"><i class="fas fa-vector-square"></i></button>
+        <button type="button" data-action="wholeScene" data-level-id="{{id}}">{{localize "FLOORER.Panel.WholeScene"}}</button>
+      </div>
+      <div class="line">
+        <span>{{localize "FLOORER.Panel.Holes"}} ({{holeCount}})</span>
+        <button type="button" data-action="drawHole" data-level-id="{{id}}"><i class="fas fa-circle-minus"></i> {{localize "FLOORER.Panel.DrawHole"}}</button>
+      </div>
+      <div class="line">
+        <span>{{localize "FLOORER.Panel.Stairs"}} ({{stairCount}})</span>
+        <select name="target-{{id}}">
+          {{#each targets}}<option value="{{id}}">{{name}}</option>{{/each}}
+        </select>
+        <button type="button" data-action="drawStair" data-level-id="{{id}}"><i class="fas fa-stairs"></i> {{localize "FLOORER.Panel.DrawStair"}}</button>
+      </div>
+      {{else}}
+      <div class="line">
+        <button type="button" data-action="adopt" data-level-id="{{id}}"><i class="fas fa-hand-holding"></i> {{localize "FLOORER.Panel.Adopt"}}</button>
+      </div>
+      {{/if}}
+    </div>
+    {{/if}}
+  </li>
+{{/each}}
+</ol>
+
+<footer class="floorer-foot">
+  <div class="issues">
+    {{#if issues.length}}
+      <i class="fas fa-triangle-exclamation"></i> {{issues.length}}
+      <button type="button" data-action="fixAll">{{localize "FLOORER.Panel.FixAll"}}</button>
+      <ul>
+        {{#each issues}}
+          <li>{{localize label}} {{#if fixable}}<button type="button" data-action="fix" data-issue-key="{{id}}:{{levelId}}:{{docId}}">{{localize "FLOORER.Panel.Fix"}}</button>{{/if}}</li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <i class="fas fa-check"></i> {{localize "FLOORER.Panel.NoIssues"}}
+    {{/if}}
+  </div>
+  <div class="journal">
+    <button type="button" data-action="undo" {{#unless journalSize}}disabled{{/unless}}><i class="fas fa-undo"></i> {{localize "FLOORER.Panel.Undo"}}</button>
+    <button type="button" data-action="revert" {{#unless journalSize}}disabled{{/unless}}><i class="fas fa-history"></i> {{localize "FLOORER.Panel.Revert"}} ({{journalSize}})</button>
+  </div>
+</footer>

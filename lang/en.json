@@ -33,6 +33,41 @@
       "Conflict": "These Floorer-managed levels do not match the new bands: {names}. Keep them and add only the new levels, or replace them?",
       "Keep": "Keep existing",
       "Replace": "Replace"
+    },
+    "Controls": { "Open": "Open Floorer" },
+    "Panel": {
+      "Setup": "Set up levels",
+      "Isolation": "Isolate active level",
+      "HasSurface": "Surface defined",
+      "NoSurface": "No surface yet",
+      "Stairs": "Stairs",
+      "Sealed": "Sealed (sees only itself)",
+      "Footprint": "Footprint",
+      "WholeScene": "Whole scene",
+      "Holes": "Holes",
+      "DrawHole": "Draw hole",
+      "DrawStair": "Draw stair",
+      "Adopt": "Manage with Floorer",
+      "FixAll": "Fix all",
+      "Fix": "Fix",
+      "NoIssues": "No issues",
+      "Undo": "Undo",
+      "Revert": "Revert session",
+      "RevertTitle": "Revert Floorer session",
+      "RevertConfirm": "Undo all {count} Floorer changes made since this scene was opened?",
+      "NothingToUndo": "Nothing to undo.",
+      "NoTarget": "Pick a target level for the stair first.",
+      "PickTarget": "Pick stair target level"
+    },
+    "Issue": {
+      "surface-missing": "Level has no floor surface.",
+      "surface-levels": "Surface is not tagged to every level that can see it (floor will look transparent).",
+      "surface-band": "Surface elevation does not match its level band.",
+      "hole-unmirrored": "Hole is not cut into the ceiling of the level below.",
+      "stair-levels": "Stair is not tagged to both connected levels (one-way stair).",
+      "stair-band": "Stair is not in the lower level's elevation band.",
+      "stair-target-missing": "Stair target level no longer exists.",
+      "level-overlap": "Two managed levels overlap in elevation."
     }
   }
 }
