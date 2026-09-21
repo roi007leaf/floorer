@@ -49,7 +49,16 @@
       "ImagePlaceholder": "path/to/floor.webp",
       "Browse": "Browse for an image",
       "AdoptDefault": "Use the existing default level as the ground floor",
-      "TooManyImages": "More images than levels were given; extra images were ignored."
+      "TooManyImages": "More images than levels were given; extra images were ignored.",
+      "Tip": {
+        "FloorsAbove": "Number of above-ground floors. Each becomes a level one floor height tall, starting at the ground elevation.",
+        "Basements": "Number of underground floors below the ground elevation. Basements are sealed by default: they see only themselves.",
+        "Roof": "Adds an open-topped level above the last floor for rooftops and flying tokens.",
+        "FloorHeight": "Vertical size of each level in scene units. Level bands are stacked using this height.",
+        "GroundBottom": "Elevation where the ground floor starts. Floors stack upward from here, basements downward.",
+        "AdoptDefault": "Reuse the scene's existing default level as the ground floor instead of creating a new one, so nothing overlaps.",
+        "Images": "Optional background image per level, shown when that level is viewed. Leave blank to keep the scene background."
+      }
     },
     "Controls": {
       "Open": "Open Floorer"

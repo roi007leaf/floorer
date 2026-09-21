@@ -2,7 +2,7 @@
   <div class="columns">
     <div class="column fields">
       <div class="field">
-        <label for="{{id}}-floorsAbove">{{localize "FLOORER.Setup.FloorsAbove"}}</label>
+        <label for="{{id}}-floorsAbove" data-tooltip="{{localize 'FLOORER.Setup.Tip.FloorsAbove'}}">{{localize "FLOORER.Setup.FloorsAbove"}}</label>
         <div class="stepper">
           <button type="button" class="icon" data-action="step" data-field="floorsAbove" data-delta="-1" data-tooltip="{{localize 'FLOORER.Setup.Fewer'}}"><i class="fas fa-minus"></i></button>
           <input type="number" id="{{id}}-floorsAbove" name="floorsAbove" min="0" step="1" value="{{floorsAbove}}">
@@ -10,7 +10,7 @@
         </div>
       </div>
       <div class="field">
-        <label for="{{id}}-basements">{{localize "FLOORER.Setup.Basements"}}</label>
+        <label for="{{id}}-basements" data-tooltip="{{localize 'FLOORER.Setup.Tip.Basements'}}">{{localize "FLOORER.Setup.Basements"}}</label>
         <div class="stepper">
           <button type="button" class="icon" data-action="step" data-field="basements" data-delta="-1" data-tooltip="{{localize 'FLOORER.Setup.Fewer'}}"><i class="fas fa-minus"></i></button>
           <input type="number" id="{{id}}-basements" name="basements" min="0" step="1" value="{{basements}}">
@@ -18,28 +18,28 @@
         </div>
       </div>
       <div class="field">
-        <label for="{{id}}-roof">{{localize "FLOORER.Setup.Roof"}}</label>
+        <label for="{{id}}-roof" data-tooltip="{{localize 'FLOORER.Setup.Tip.Roof'}}">{{localize "FLOORER.Setup.Roof"}}</label>
         <label class="toggle">
           <input type="checkbox" id="{{id}}-roof" name="roof" {{#if roof}}checked{{/if}}>
           <span>{{localize "FLOORER.Setup.RoofHint"}}</span>
         </label>
       </div>
       <div class="field">
-        <label for="{{id}}-floorHeight">{{localize "FLOORER.Setup.FloorHeight"}}</label>
+        <label for="{{id}}-floorHeight" data-tooltip="{{localize 'FLOORER.Setup.Tip.FloorHeight'}}">{{localize "FLOORER.Setup.FloorHeight"}}</label>
         <div class="unit">
           <input type="number" id="{{id}}-floorHeight" name="floorHeight" min="1" step="any" value="{{floorHeight}}">
           <span class="unit-label">{{units}}</span>
         </div>
       </div>
       <div class="field">
-        <label for="{{id}}-groundBottom">{{localize "FLOORER.Setup.GroundBottom"}}</label>
+        <label for="{{id}}-groundBottom" data-tooltip="{{localize 'FLOORER.Setup.Tip.GroundBottom'}}">{{localize "FLOORER.Setup.GroundBottom"}}</label>
         <div class="unit">
           <input type="number" id="{{id}}-groundBottom" name="groundBottom" step="any" value="{{groundBottom}}">
           <span class="unit-label">{{units}}</span>
         </div>
       </div>
       {{#if canAdoptDefault}}
-      <label class="toggle adopt">
+      <label class="toggle adopt" data-tooltip="{{localize 'FLOORER.Setup.Tip.AdoptDefault'}}">
         <input type="checkbox" name="adoptDefault" checked>
         <span>{{localize "FLOORER.Setup.AdoptDefault"}}</span>
       </label>
@@ -56,7 +56,7 @@
   </div>
 
   <div class="images">
-    <span class="caption">{{localize "FLOORER.Setup.Images"}}</span>
+    <span class="caption" data-tooltip="{{localize 'FLOORER.Setup.Tip.Images'}}">{{localize "FLOORER.Setup.Images"}}</span>
     <p class="hint">{{localize "FLOORER.Setup.ImagesHint"}}</p>
     <ul class="image-rows {{#if manyLevels}}two-col{{/if}}">
       {{#each rows}}
