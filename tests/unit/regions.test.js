@@ -104,7 +104,7 @@ test("stairCreateData excludes an intermediate level whose floor doesn't reach t
   const farShapes = [{ type: "rectangle", x: 1000, y: 1000, width: 10, height: 10, rotation: 0, hole: false }];
   const plan = planOf([bare(f1), { level: f2, surface: { shapes: farShapes, flags: { floorer: { managed: true } } } }, bare(f3)]);
   const data = stairCreateData(f1, f3, shapes, ["walk"], 0, plan);
-  expect(data.levels).toEqual(["f1", "f2", "f3"]);
+  expect(data.levels).toEqual(["f1", "f3"]);
   expect(data.flags.floorer.stops).toEqual([]);
 });
 

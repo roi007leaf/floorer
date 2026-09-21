@@ -56,6 +56,10 @@ export function stairStops(plan, lower, upper, shapes) {
     .map((l) => l.id);
 }
 
+export function stairLevelTags(lower, upper, stops) {
+  return [lower.id, ...stops, upper.id];
+}
+
 export function stairCreateData(levelA, levelB, shapes, actions, index = 0, plan = { levels: [] }) {
   const { lower, upper } = orderPair(levelA, levelB);
   const allLevels = plan.levels.map((e) => e.level);
@@ -66,7 +70,7 @@ export function stairCreateData(levelA, levelB, shapes, actions, index = 0, plan
     color: stairColor(index),
     shapes,
     elevation: { ...shaft.band, topInclusive: true },
-    levels: shaft.levels,
+    levels: stairLevelTags(lower, upper, stops),
     behaviors: [stairBehavior(actions)],
     flags: { floorer: { role: ROLES.STAIR, levelId: lower.id, targetLevelId: upper.id, stops, index, managed: true, v: FLAG_VERSION } },
   };

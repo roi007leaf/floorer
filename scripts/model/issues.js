@@ -2,7 +2,7 @@ import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, shaftOf, stairSt
 import { holeAppendData } from "./holes.js";
 import { bandChangeUpdates, bandGaps } from "./band-edit.js";
 import { stairOpeningShapes, stairOpeningUpdates, stairSurfaces } from "./stair-retarget.js";
-import { stairStops } from "./regions.js";
+import { stairLevelTags, stairStops } from "./regions.js";
 
 export function sameSet(a, b) {
   const sa = new Set(a);
@@ -56,8 +56,8 @@ function holeIssues(entry) {
   });
 }
 
-function stairTagFix(stair, shaft, stops) {
-  return { collection: "regions", op: "update", data: { _id: stair.id, levels: shaft.levels, "flags.floorer.stops": stops } };
+function stairTagFix(stair, levels, stops) {
+  return { collection: "regions", op: "update", data: { _id: stair.id, levels, "flags.floorer.stops": stops } };
 }
 
 function stairIssues(entry, plan, allLevels) {
@@ -69,7 +69,8 @@ function stairIssues(entry, plan, allLevels) {
     const shaft = shaftOf(lower, upper, allLevels);
     const stops = stairStops(plan, lower, upper, stair.shapes);
     const out = [];
-    if (!sameSet(stair.levels, shaft.levels) || !sameSet(flagStairStops(stair), stops)) out.push(issue("stair-levels", entry.level.id, stair.id, stairTagFix(stair, shaft, stops)));
+    const tags = stairLevelTags(lower, upper, stops);
+    if (!sameSet(stair.levels, tags) || !sameSet(flagStairStops(stair), stops)) out.push(issue("stair-levels", entry.level.id, stair.id, stairTagFix(stair, tags, stops)));
     if (!sameBand(stair.elevation, shaft.band)) out.push(issue("stair-band", entry.level.id, stair.id, { collection: "regions", op: "update", data: bandData(stair.id, shaft.band) }));
     return out;
   });
