@@ -1,6 +1,7 @@
-import { findLevel, isManaged, orderPair, shaftLevels, shaftOf } from "./floor-plan.js";
+import { findLevel, isManaged, orderPair, shaftOf } from "./floor-plan.js";
 import { holeAppendData, stairRemovalUpdates } from "./holes.js";
 import { padShape, STAIR_OPENING_PAD } from "./shapes.js";
+import { stairStops } from "./regions.js";
 
 function findStair(plan, stairId) {
   return plan.levels.flatMap((e) => e.stairs).find((s) => s.id === stairId) ?? null;
@@ -8,19 +9,6 @@ function findStair(plan, stairId) {
 
 function allLevels(plan) {
   return plan.levels.map((e) => e.level);
-}
-
-function stairUpdate(stair, lower, upper, plan) {
-  const shaft = shaftOf(lower, upper, allLevels(plan));
-  return {
-    _id: stair.id,
-    name: `Stair ${lower.name} ↔ ${upper.name}`,
-    elevation: { ...shaft.band, topInclusive: true },
-    levels: shaft.levels,
-    "flags.floorer.levelId": lower.id,
-    "flags.floorer.targetLevelId": upper.id,
-    "flags.floorer.stops": shaft.stops,
-  };
 }
 
 function afterRemoval(surface, removals) {
@@ -35,14 +23,33 @@ function managedSurface(entry, removals) {
   return surface && isManaged(surface) ? afterRemoval(surface, removals) : null;
 }
 
+function planAfterRemoval(plan, removals) {
+  return { levels: plan.levels.map((e) => ({ ...e, surface: e.surface ? afterRemoval(e.surface, removals) : null })) };
+}
+
+function stairUpdate(stair, lower, upper, plan, removals) {
+  const shaft = shaftOf(lower, upper, allLevels(plan));
+  return {
+    _id: stair.id,
+    name: `Stair ${lower.name} ↔ ${upper.name}`,
+    elevation: { ...shaft.band, topInclusive: true },
+    levels: shaft.levels,
+    "flags.floorer.levelId": lower.id,
+    "flags.floorer.targetLevelId": upper.id,
+    "flags.floorer.stops": stairStops(planAfterRemoval(plan, removals), lower, upper, stair.shapes),
+  };
+}
+
 export function stairSurfaces(plan, stair, removals = []) {
   const flag = stair.flags.floorer;
   const fromEntry = findLevel(plan, flag.levelId);
   const targetEntry = findLevel(plan, flag.targetLevelId);
   if (!fromEntry || !targetEntry) return [];
   const { lower, upper } = orderPair(fromEntry.level, targetEntry.level);
-  return shaftLevels(lower, upper, allLevels(plan))
-    .map((l) => managedSurface(findLevel(plan, l.id), removals))
+  const stops = stairStops(planAfterRemoval(plan, removals), lower, upper, stair.shapes);
+  const ids = [lower.id, ...stops, upper.id];
+  return ids
+    .map((id) => managedSurface(findLevel(plan, id), removals))
     .filter(Boolean)
     .reverse();
 }
@@ -73,7 +80,7 @@ export function stairRetargetUpdates(plan, stairId, fromLevelId, newTargetLevelI
   const surfaceRemovals = stairRemovalUpdates(plan, stairId);
   const nextStair = { ...stair, flags: { ...stair.flags, floorer: { ...current, levelId: lower.id, targetLevelId: upper.id } } };
   return {
-    stair: stairUpdate(stair, lower, upper, plan),
+    stair: stairUpdate(stair, lower, upper, plan, surfaceRemovals),
     surfaceRemovals,
     surfaceAdditions: stairOpeningUpdates(plan, nextStair, surfaceRemovals),
   };

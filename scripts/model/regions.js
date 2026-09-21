@@ -1,5 +1,6 @@
 import { FLAG_VERSION, ROLES } from "../constants.js";
-import { bandOf, orderPair, shaftOf, surfaceLevels } from "./floor-plan.js";
+import { bandOf, findLevel, isManaged, orderPair, shaftLevels, shaftOf, surfaceLevels } from "./floor-plan.js";
+import { shapeCenter, shapesContain } from "./shapes.js";
 
 export function surfaceBehavior(level) {
   const placement = bandOf(level).top === null ? "bottom" : "both";
@@ -42,9 +43,24 @@ export function stairColor(index) {
   return STAIR_PALETTE[index % STAIR_PALETTE.length];
 }
 
-export function stairCreateData(levelA, levelB, shapes, actions, index = 0, allLevels = []) {
+export function stairStops(plan, lower, upper, shapes) {
+  const point = shapeCenter(Array.from(shapes ?? [])[0]);
+  const allLevels = plan.levels.map((e) => e.level);
+  const ends = new Set([lower.id, upper.id]);
+  return shaftLevels(lower, upper, allLevels)
+    .filter((l) => !ends.has(l.id))
+    .filter((l) => {
+      const surface = findLevel(plan, l.id)?.surface;
+      return !!surface && isManaged(surface) && shapesContain(surface.shapes, point);
+    })
+    .map((l) => l.id);
+}
+
+export function stairCreateData(levelA, levelB, shapes, actions, index = 0, plan = { levels: [] }) {
   const { lower, upper } = orderPair(levelA, levelB);
+  const allLevels = plan.levels.map((e) => e.level);
   const shaft = shaftOf(lower, upper, allLevels);
+  const stops = stairStops(plan, lower, upper, shapes);
   return {
     name: `Stair ${lower.name} ↔ ${upper.name}`,
     color: stairColor(index),
@@ -52,7 +68,7 @@ export function stairCreateData(levelA, levelB, shapes, actions, index = 0, allL
     elevation: { ...shaft.band, topInclusive: true },
     levels: shaft.levels,
     behaviors: [stairBehavior(actions)],
-    flags: { floorer: { role: ROLES.STAIR, levelId: lower.id, targetLevelId: upper.id, stops: shaft.stops, index, managed: true, v: FLAG_VERSION } },
+    flags: { floorer: { role: ROLES.STAIR, levelId: lower.id, targetLevelId: upper.id, stops, index, managed: true, v: FLAG_VERSION } },
   };
 }
 

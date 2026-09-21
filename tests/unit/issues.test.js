@@ -2,11 +2,12 @@ import { lint, sameSet } from "../../scripts/model/issues.js";
 import { buildFloorPlan } from "../../scripts/model/floor-plan.js";
 
 const L = (id, bottom, top, vis) => ({ id, _id: id, name: id, elevation: { bottom, top }, visibility: { levels: new Set(vis) }, flags: { floorer: { role: "level", managed: true } } });
-const S = (id, levelId, { levels, elevation, holes = [] }) => ({
-  id, _id: id, levels: new Set(levels), elevation: { topInclusive: true, ...elevation }, shapes: [], flags: { floorer: { role: "surface", levelId, holes, managed: true } },
+const stairShape = { type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: false };
+const S = (id, levelId, { levels, elevation, holes = [], shapes = [stairShape] }) => ({
+  id, _id: id, levels: new Set(levels), elevation: { topInclusive: true, ...elevation }, shapes, flags: { floorer: { role: "surface", levelId, holes, managed: true } },
 });
 const ST = (id, levelId, targetLevelId, { levels, elevation }) => ({
-  id, _id: id, levels: new Set(levels), elevation: { topInclusive: true, ...elevation }, shapes: [{ type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: false }], flags: { floorer: { role: "stair", levelId, targetLevelId, managed: true } },
+  id, _id: id, levels: new Set(levels), elevation: { topInclusive: true, ...elevation }, shapes: [stairShape], flags: { floorer: { role: "stair", levelId, targetLevelId, managed: true } },
 });
 const ids = (issues) => issues.map((i) => i.id);
 

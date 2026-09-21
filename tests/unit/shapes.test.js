@@ -1,4 +1,4 @@
-import { padShape, shapeCenter, shapeSummary, STAIR_OPENING_PAD } from "../../scripts/model/shapes.js";
+import { padShape, shapeCenter, shapesContain, shapeSummary, STAIR_OPENING_PAD } from "../../scripts/model/shapes.js";
 
 test("shapeSummary describes rectangles, polygons and round shapes", () => {
   expect(shapeSummary({ type: "rectangle", x: 10, y: 20, width: 300, height: 400 })).toBe("300×400 @ 10,20");
@@ -50,4 +50,40 @@ test("padShape unwraps toObject shapes and leaves the original untouched", () =>
   const shape = { toObject: () => rect };
   expect(padShape(shape, 2)).toEqual({ type: "rectangle", x: -2, y: -2, width: 14, height: 14 });
   expect(rect).toEqual({ type: "rectangle", x: 0, y: 0, width: 10, height: 10 });
+});
+
+test("shapesContain: rectangle containment ignores rotation", () => {
+  const rect = { type: "rectangle", x: 0, y: 0, width: 10, height: 10, rotation: 45, hole: false };
+  expect(shapesContain([rect], { x: 5, y: 5 })).toBe(true);
+  expect(shapesContain([rect], { x: 20, y: 20 })).toBe(false);
+});
+
+test("shapesContain: ellipse containment ignores rotation", () => {
+  const ellipse = { type: "ellipse", x: 0, y: 0, radiusX: 10, radiusY: 5, rotation: 30, hole: false };
+  expect(shapesContain([ellipse], { x: 5, y: 0 })).toBe(true);
+  expect(shapesContain([ellipse], { x: 0, y: 6 })).toBe(false);
+});
+
+test("shapesContain: circle containment", () => {
+  const circle = { type: "circle", x: 0, y: 0, radius: 10, hole: false };
+  expect(shapesContain([circle], { x: 5, y: 5 })).toBe(true);
+  expect(shapesContain([circle], { x: 8, y: 8 })).toBe(false);
+});
+
+test("shapesContain: polygon containment via ray casting", () => {
+  const polygon = { type: "polygon", points: [0, 0, 10, 0, 10, 10, 0, 10], hole: false };
+  expect(shapesContain([polygon], { x: 5, y: 5 })).toBe(true);
+  expect(shapesContain([polygon], { x: 15, y: 5 })).toBe(false);
+});
+
+test("shapesContain: a point inside a hole is excluded even though a non-hole shape contains it", () => {
+  const outer = { type: "rectangle", x: 0, y: 0, width: 10, height: 10, hole: false };
+  const hole = { type: "rectangle", x: 2, y: 2, width: 4, height: 4, hole: true };
+  expect(shapesContain([outer, hole], { x: 4, y: 4 })).toBe(false);
+  expect(shapesContain([outer, hole], { x: 1, y: 1 })).toBe(true);
+});
+
+test("shapesContain returns false with no containing shape or no point", () => {
+  expect(shapesContain([], { x: 0, y: 0 })).toBe(false);
+  expect(shapesContain([{ type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: false }], null)).toBe(false);
 });

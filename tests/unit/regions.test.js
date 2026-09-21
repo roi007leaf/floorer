@@ -2,6 +2,9 @@ import { surfaceCreateData, stairCreateData, wholeSceneShape, movementActionKeys
 
 const L = (id, bottom, top, vis) => ({ id, name: id, elevation: { bottom, top }, visibility: { levels: new Set(vis) } });
 const shapes = [{ type: "rectangle", x: 0, y: 0, width: 10, height: 10, rotation: 0, hole: false }];
+const floored = (level) => ({ level, surface: { shapes, flags: { floorer: { managed: true } } } });
+const bare = (level) => ({ level, surface: null });
+const planOf = (entries) => ({ levels: entries });
 
 test("surfaceCreateData tags every viewing level", () => {
   const f1 = L("f1", 0, 10, ["f1", "f2"]);
@@ -65,7 +68,8 @@ test("stairCreateData tags every level inside the climb as a stop, sorted by bot
   const f2 = L("f2", 10, 20, ["f2"]);
   const f3 = L("f3", 20, 30, ["f3"]);
   const roof = L("r", 30, null, ["r"]);
-  const data = stairCreateData(f3, f1, shapes, ["walk"], 0, [roof, f3, f2, f1]);
+  const plan = planOf([bare(roof), bare(f3), floored(f2), bare(f1)]);
+  const data = stairCreateData(f3, f1, shapes, ["walk"], 0, plan);
   expect(data.elevation).toEqual({ bottom: 0, top: 30, topInclusive: true });
   expect(data.levels).toEqual(["f1", "f2", "f3"]);
   expect(data.flags.floorer).toMatchObject({ levelId: "f1", targetLevelId: "f3", stops: ["f2"] });
@@ -76,7 +80,8 @@ test("stairCreateData to an open-topped roof includes every level above the lowe
   const f1 = L("f1", 0, 10, ["f1"]);
   const f2 = L("f2", 10, 20, ["f2"]);
   const roof = L("r", 20, null, ["r"]);
-  const data = stairCreateData(f1, roof, shapes, ["walk"], 0, [f1, f2, roof]);
+  const plan = planOf([bare(f1), floored(f2), bare(roof)]);
+  const data = stairCreateData(f1, roof, shapes, ["walk"], 0, plan);
   expect(data.elevation).toEqual({ bottom: 0, top: null, topInclusive: true });
   expect(data.levels).toEqual(["f1", "f2", "r"]);
   expect(data.flags.floorer.stops).toEqual(["f2"]);
@@ -86,8 +91,29 @@ test("stairCreateData leaves out levels that only partly overlap the climb", () 
   const f1 = L("f1", 0, 10, ["f1"]);
   const f2 = L("f2", 10, 20, ["f2"]);
   const half = L("h", 15, 25, ["h"]);
-  const data = stairCreateData(f1, f2, shapes, ["walk"], 0, [f1, f2, half]);
+  const plan = planOf([bare(f1), bare(f2), floored(half)]);
+  const data = stairCreateData(f1, f2, shapes, ["walk"], 0, plan);
   expect(data.levels).toEqual(["f1", "f2"]);
+  expect(data.flags.floorer.stops).toEqual([]);
+});
+
+test("stairCreateData excludes an intermediate level whose floor doesn't reach the stair", () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const f2 = L("f2", 10, 20, ["f2"]);
+  const f3 = L("f3", 20, 30, ["f3"]);
+  const farShapes = [{ type: "rectangle", x: 1000, y: 1000, width: 10, height: 10, rotation: 0, hole: false }];
+  const plan = planOf([bare(f1), { level: f2, surface: { shapes: farShapes, flags: { floorer: { managed: true } } } }, bare(f3)]);
+  const data = stairCreateData(f1, f3, shapes, ["walk"], 0, plan);
+  expect(data.levels).toEqual(["f1", "f2", "f3"]);
+  expect(data.flags.floorer.stops).toEqual([]);
+});
+
+test("stairCreateData excludes an unmanaged surface even if it covers the stair", () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const f2 = L("f2", 10, 20, ["f2"]);
+  const f3 = L("f3", 20, 30, ["f3"]);
+  const plan = planOf([bare(f1), { level: f2, surface: { shapes, flags: { floorer: { managed: false } } } }, bare(f3)]);
+  const data = stairCreateData(f1, f3, shapes, ["walk"], 0, plan);
   expect(data.flags.floorer.stops).toEqual([]);
 });
 

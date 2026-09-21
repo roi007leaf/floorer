@@ -39,7 +39,7 @@ test("viewing from the upper end and picking a lower target reorders the pair", 
   const plan = planWith([stair("f1", "f2")]);
   const out = stairRetargetUpdates(plan, "st", "f2", "f3");
   expect(out.stair).toMatchObject({ elevation: { bottom: 10, top: 30, topInclusive: true }, levels: ["f2", "f3"], "flags.floorer.levelId": "f2", "flags.floorer.targetLevelId": "f3", "flags.floorer.stops": [] });
-  const down = stairRetargetUpdates(planWith([stair("f2", "f3")]), "st", "f3", "f1");
+  const down = stairRetargetUpdates(planWith([S("f2"), stair("f2", "f3")]), "st", "f3", "f1");
   expect(down.stair).toMatchObject({ elevation: { bottom: 0, top: 30, topInclusive: true }, levels: ["f1", "f2", "f3"], "flags.floorer.levelId": "f1", "flags.floorer.targetLevelId": "f3", "flags.floorer.stops": ["f2"] });
 });
 

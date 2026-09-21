@@ -82,3 +82,50 @@ export function padShape(shape, pad) {
   if (s.type === "polygon") return padPolygon(s, pad);
   return { ...s };
 }
+
+function pointInRectangle(s, p) {
+  return p.x >= s.x && p.x <= s.x + s.width && p.y >= s.y && p.y <= s.y + s.height;
+}
+
+function pointInEllipse(s, p) {
+  const dx = (p.x - s.x) / s.radiusX;
+  const dy = (p.y - s.y) / s.radiusY;
+  return dx * dx + dy * dy <= 1;
+}
+
+function pointInCircle(s, p) {
+  return Math.hypot(p.x - s.x, p.y - s.y) <= s.radius;
+}
+
+function pointInPolygon(s, p) {
+  const points = s.points ?? [];
+  const n = Math.floor(points.length / 2);
+  let inside = false;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = points[2 * i];
+    const yi = points[2 * i + 1];
+    const xj = points[2 * j];
+    const yj = points[2 * j + 1];
+    const crosses = yi > p.y !== yj > p.y && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi;
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
+function pointInShape(shape, p) {
+  const s = plain(shape);
+  if (!s) return false;
+  if (s.type === "rectangle") return pointInRectangle(s, p);
+  if (s.type === "ellipse") return pointInEllipse(s, p);
+  if (s.type === "circle") return pointInCircle(s, p);
+  if (s.type === "polygon") return pointInPolygon(s, p);
+  return false;
+}
+
+export function shapesContain(shapes, point) {
+  if (!point) return false;
+  const list = Array.from(shapes ?? []);
+  const contained = list.some((sh) => !plain(sh)?.hole && pointInShape(sh, point));
+  if (!contained) return false;
+  return !list.some((sh) => plain(sh)?.hole && pointInShape(sh, point));
+}
