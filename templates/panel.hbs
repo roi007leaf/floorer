@@ -52,7 +52,7 @@
         {{#if (eq ../details.kind "stairs")}}
         <span class="swatch" data-color="{{color}}"></span>
         <span class="code">{{code}}</span>
-        <span class="label">{{label}}</span>
+        <button type="button" class="label" data-action="jumpStair" data-region-id="{{id}}" data-level-id="{{otherLevelId}}" data-tooltip="{{jumpTooltip}}">{{label}}</button>
         <span class="shape">{{shape}}</span>
         <button type="button" class="icon" data-action="locateRegion" data-region-id="{{id}}" data-level-id="{{../id}}" data-tooltip="{{localize 'FLOORER.Panel.Locate'}}"><i class="fas fa-crosshairs"></i></button>
         <button type="button" class="icon danger" data-action="deleteStair" data-region-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Delete'}}"><i class="fas fa-trash"></i></button>

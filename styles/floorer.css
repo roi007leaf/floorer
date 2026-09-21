@@ -30,6 +30,15 @@
   --floorer-row-h: 34px;
 }
 
+@keyframes floorer-flash {
+  from {
+    background: var(--floorer-primary-bg-medium);
+  }
+  to {
+    background: transparent;
+  }
+}
+
 .floorer {
   --floorer-pad: 10px;
   --floorer-control: 26px;
@@ -545,6 +554,22 @@
       flex: 0 0 auto;
       font-weight: 600;
       white-space: nowrap;
+    }
+
+    button.label {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--floorer-primary);
+      }
+    }
+
+    &.flash {
+      animation: floorer-flash 1.2s ease-out;
     }
 
     .shape {

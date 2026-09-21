@@ -21,6 +21,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   #editingBandId = null;
   #bandDraft = null;
   #expanded = null;
+  #highlightRegionId = null;
   #indexing = false;
 
   static DEFAULT_OPTIONS = {
@@ -50,6 +51,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleStairs: FloorerPanel.#onToggleDetails,
       toggleHoles: FloorerPanel.#onToggleDetails,
       locateRegion: FloorerPanel.#onLocateRegion,
+      jumpStair: FloorerPanel.#onJumpStair,
       locateHole: FloorerPanel.#onLocateHole,
       deleteStair: FloorerPanel.#onDeleteStair,
       deleteHole: FloorerPanel.#onDeleteHole,
@@ -113,6 +115,18 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#paintSwatches();
     this.#bindStairHover();
     this.#ensureStairIndices();
+    this.#applyHighlight();
+  }
+
+  #applyHighlight() {
+    const regionId = this.#highlightRegionId;
+    if (!regionId) return;
+    this.#highlightRegionId = null;
+    const row = this.element.querySelector(`.detail-row[data-region-id="${regionId}"]`);
+    if (!row) return;
+    row.scrollIntoView({ block: "nearest" });
+    row.classList.add("flash");
+    row.addEventListener("animationend", () => row.classList.remove("flash"), { once: true });
   }
 
   #paintSwatches() {
@@ -358,6 +372,13 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onLocateRegion(_event, target) {
     await locateRegion(canvas.scene, target.dataset.regionId, target.dataset.levelId);
+  }
+
+  static #onJumpStair(_event, target) {
+    const { regionId, levelId } = target.dataset;
+    this.#expanded = { levelId, kind: "stairs" };
+    this.#highlightRegionId = regionId;
+    this.render();
   }
 
   static async #onLocateHole(_event, target) {

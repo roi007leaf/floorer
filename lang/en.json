@@ -81,6 +81,7 @@
       "HoleSummary": "{holes} holes · {openings} stair openings",
       "HoleN": "#{n}",
       "Locate": "Locate on the map",
+      "JumpStair": "Show this stair in {level}'s list",
       "Delete": "Delete",
       "ConfirmDeleteStair": "Delete this stair and the openings it cut into the floors?",
       "ConfirmDeleteHole": "Delete this hole and its mirrored opening below?",

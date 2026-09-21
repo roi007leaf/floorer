@@ -74,8 +74,18 @@ function stairCode(stair) {
 }
 
 function stairItem(stair, entry, plan) {
-  const other = findLevel(plan, otherLevelId(stair, entry))?.level;
-  return { id: stair.id, levelId: stair.flags?.floorer?.levelId, color: stair.color ?? null, code: stairCode(stair), label: `\u2194 ${other?.name ?? "?"}`, shape: shapeSummary(firstShape(stair)) };
+  const otherId = otherLevelId(stair, entry);
+  const other = findLevel(plan, otherId)?.level;
+  return {
+    id: stair.id,
+    levelId: stair.flags?.floorer?.levelId,
+    otherLevelId: otherId,
+    color: stair.color ?? null,
+    code: stairCode(stair),
+    label: `\u2194 ${other?.name ?? "?"}`,
+    jumpTooltip: game.i18n.format("FLOORER.Panel.JumpStair", { level: other?.name ?? "?" }),
+    shape: shapeSummary(firstShape(stair)),
+  };
 }
 
 function holeShapesOf(surface) {
