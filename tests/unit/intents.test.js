@@ -21,8 +21,42 @@ function scene(levels, regions) {
 beforeEach(() => {
   intents.clear();
   journal.clear();
-  canvas.regions = { activate: jest.fn() };
+  canvas.regions = { activate: jest.fn(), releaseAll: jest.fn(), placeables: [] };
+  ui.controls = { control: { name: "regions" }, tool: { name: "polygon" } };
   game.settings.set("floorer", "mirrorHoles", true);
+});
+
+test("arm survives the scene-controls hook fired by its own tool activation", () => {
+  canvas.regions.activate = jest.fn(() => intents.onSceneControls());
+  intents.arm({ kind: "footprint", levelId: "f1", tool: "polygon" });
+  expect(intents.current?.kind).toBe("footprint");
+});
+
+test("onSceneControls keeps the intent while the armed tool stays active", () => {
+  intents.arm({ kind: "footprint", levelId: "f1", tool: "polygon" });
+  intents.onSceneControls();
+  expect(intents.current?.kind).toBe("footprint");
+});
+
+test("onSceneControls clears the intent when the user switches tool or layer", () => {
+  intents.arm({ kind: "footprint", levelId: "f1", tool: "polygon" });
+  ui.controls.tool = { name: "select" };
+  intents.onSceneControls();
+  expect(intents.current).toBeNull();
+  intents.arm({ kind: "footprint", levelId: "f1", tool: "polygon" });
+  ui.controls = { control: { name: "walls" }, tool: { name: "polygon" } };
+  intents.onSceneControls();
+  expect(intents.current).toBeNull();
+});
+
+test("arm releases controlled regions and closes open region sheets", () => {
+  const openSheet = { rendered: true, close: jest.fn() };
+  const closedSheet = { rendered: false, close: jest.fn() };
+  canvas.regions.placeables = [{ sheet: openSheet }, { sheet: closedSheet }, {}];
+  intents.arm({ kind: "hole", levelId: "f1", tool: "rectangle" });
+  expect(canvas.regions.releaseAll).toHaveBeenCalled();
+  expect(openSheet.close).toHaveBeenCalled();
+  expect(closedSheet.close).not.toHaveBeenCalled();
 });
 
 test("arm stores intent and activates tool", () => {
@@ -102,7 +136,7 @@ test("stair adoption uses lower band and mirrors on create", async () => {
   const doc = { updateSource: jest.fn() };
   intents.onPreCreateRegion(doc, { shapes: [rect] }, {}, "gm1");
   const src = doc.updateSource.mock.calls[0][0];
-  expect(src.elevation).toEqual({ bottom: 0, top: 10 });
+  expect(src.elevation).toEqual({ bottom: 0, top: 10, topInclusive: true });
   expect(src.levels).toEqual(["f1", "f2"]);
   expect(src.behaviors[0].type).toBe("changeLevel");
   const created = { id: "st", shapes: [rect], flags: { floorer: src.flags.floorer } };

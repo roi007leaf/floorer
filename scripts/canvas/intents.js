@@ -27,8 +27,18 @@ async function applyHoleUpdates(scene, updates) {
   await journal.run({ op: "update", collection: "regions", scene, before }, () => scene.updateEmbeddedDocuments("Region", data));
 }
 
+function releaseRegions() {
+  canvas.regions?.releaseAll?.();
+  canvas.regions?.placeables?.forEach((p) => p.sheet?.rendered && p.sheet.close());
+}
+
+function armedToolActive(intent) {
+  return ui.controls?.control?.name === "regions" && ui.controls?.tool?.name === intent.tool;
+}
+
 class Intents {
   #current = null;
+  #arming = false;
   #listeners = new Set();
 
   get current() {
@@ -46,9 +56,20 @@ class Intents {
 
   arm(intent) {
     this.#current = { ...intent };
-    canvas.regions?.activate({ tool: intent.tool });
+    releaseRegions();
+    this.#arming = true;
+    try {
+      canvas.regions?.activate({ tool: intent.tool });
+    } finally {
+      this.#arming = false;
+    }
     notify("info", `FLOORER.Intent.Armed.${intent.kind}`, { level: levelName(intent.levelId) });
     this.#emit();
+  }
+
+  onSceneControls() {
+    if (this.#arming || !this.#current) return;
+    if (!armedToolActive(this.#current)) this.clear();
   }
 
   clear() {

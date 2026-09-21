@@ -2,11 +2,11 @@ import { FLAG_VERSION, INTENTS, ROLES } from "../constants.js";
 import { journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
 import { surfaceCreateData, wholeSceneShape } from "../model/regions.js";
+import { bandOf } from "../model/floor-plan.js";
 
 function bandLabel(level) {
-  const top = level.elevation.top ?? "∞";
-  const bottom = level.elevation.bottom ?? "-∞";
-  return `${bottom}–${top}`;
+  const band = bandOf(level);
+  return `${band.bottom ?? "-∞"}–${band.top ?? "∞"}`;
 }
 
 function isSealed(entry) {

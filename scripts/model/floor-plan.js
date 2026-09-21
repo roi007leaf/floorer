@@ -13,6 +13,14 @@ function bottomOf(level) {
   return level.elevation?.bottom ?? -Infinity;
 }
 
+export function finiteOrNull(v) {
+  return Number.isFinite(v) ? v : null;
+}
+
+export function bandOf(level) {
+  return { bottom: finiteOrNull(level?.elevation?.bottom), top: finiteOrNull(level?.elevation?.top) };
+}
+
 function toArray(collection) {
   return collection ? Array.from(collection) : [];
 }
@@ -55,10 +63,10 @@ function linkNeighbours(levels) {
 }
 
 export function buildFloorPlan(scene) {
-  const sorted = toArray(scene.levels).sort((a, b) => bottomOf(a) - bottomOf(b));
+  const sorted = toArray(scene?.levels).sort((a, b) => bottomOf(a) - bottomOf(b));
   const levels = sorted.map(emptyFloorLevel);
   const byLevel = new Map(levels.map((e) => [e.level.id, e]));
-  attachRegions(byLevel, toArray(scene.regions));
+  attachRegions(byLevel, toArray(scene?.regions));
   linkNeighbours(levels);
   return { scene, levels };
 }

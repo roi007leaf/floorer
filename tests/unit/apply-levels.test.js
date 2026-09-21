@@ -24,3 +24,12 @@ test("parseImages keeps interior blank lines, drops trailing blanks", () => {
   expect(parseImages("a.webp\n\n")).toEqual(["a.webp"]);
   expect(parseImages("")).toEqual([]);
 });
+
+test("live roof with Infinity top is reused, not a conflict", () => {
+  const roofOpts = { ...opts, roof: true, images: [] };
+  const scene = { levels: [L("x", 0, 10, true), L("y", 10, 20, true), L("r", 20, Infinity, true)] };
+  const out = planLevelChanges(scene, roofOpts);
+  expect(out.create).toEqual([]);
+  expect(out.reuse.map((r) => r.existing.id)).toEqual(["x", "y", "r"]);
+  expect(out.conflicts).toEqual([]);
+});

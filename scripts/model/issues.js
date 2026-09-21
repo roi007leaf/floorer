@@ -1,4 +1,4 @@
-import { findLevel, isManaged, orderPair, surfaceLevels } from "./floor-plan.js";
+import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, surfaceLevels } from "./floor-plan.js";
 import { holeAppendData } from "./holes.js";
 
 export function sameSet(a, b) {
@@ -8,11 +8,12 @@ export function sameSet(a, b) {
 }
 
 function sameBand(elevation, level) {
-  return elevation?.bottom === level.elevation.bottom && (elevation?.top ?? null) === (level.elevation.top ?? null);
+  const want = bandOf(level);
+  return finiteOrNull(elevation?.bottom) === want.bottom && finiteOrNull(elevation?.top) === want.top && elevation?.topInclusive === true;
 }
 
 function bandData(id, level) {
-  return { _id: id, elevation: { bottom: level.elevation.bottom, top: level.elevation.top }, topInclusive: true };
+  return { _id: id, elevation: { ...bandOf(level), topInclusive: true } };
 }
 
 function issue(id, levelId, docId, fix) {
@@ -68,9 +69,9 @@ function stairIssues(entry, plan) {
 }
 
 function overlaps(a, b) {
-  const aTop = a.elevation.top ?? Infinity;
-  const bTop = b.elevation.top ?? Infinity;
-  return a.elevation.bottom < bTop && b.elevation.bottom < aTop;
+  const ba = bandOf(a);
+  const bb = bandOf(b);
+  return (ba.bottom ?? -Infinity) < (bb.top ?? Infinity) && (bb.bottom ?? -Infinity) < (ba.top ?? Infinity);
 }
 
 function overlapIssues(plan) {

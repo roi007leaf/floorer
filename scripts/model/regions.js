@@ -1,8 +1,8 @@
 import { FLAG_VERSION, ROLES } from "../constants.js";
-import { orderPair, surfaceLevels } from "./floor-plan.js";
+import { bandOf, orderPair, surfaceLevels } from "./floor-plan.js";
 
 export function surfaceBehavior(level) {
-  const placement = level.elevation.top === null ? "bottom" : "both";
+  const placement = bandOf(level).top === null ? "bottom" : "both";
   return {
     type: "defineSurface",
     system: { placement, light: true, move: true, sight: true, sound: true, occlusion: true, exposure: false, culling: false },
@@ -18,7 +18,7 @@ export function stairBehavior(actions) {
 }
 
 function band(level) {
-  return { bottom: level.elevation.bottom, top: level.elevation.top };
+  return { ...bandOf(level), topInclusive: true };
 }
 
 export function surfaceCreateData(level, allLevels, shapes) {
@@ -26,7 +26,6 @@ export function surfaceCreateData(level, allLevels, shapes) {
     name: `Surface ${level.name}`,
     shapes,
     elevation: band(level),
-    topInclusive: true,
     levels: surfaceLevels(level, allLevels),
     behaviors: [surfaceBehavior(level)],
     flags: { floorer: { role: ROLES.SURFACE, levelId: level.id, holes: [], managed: true, v: FLAG_VERSION } },
@@ -39,7 +38,6 @@ export function stairCreateData(levelA, levelB, shapes, actions) {
     name: `Stair ${lower.name} ↔ ${upper.name}`,
     shapes,
     elevation: band(lower),
-    topInclusive: true,
     levels: [lower.id, upper.id],
     behaviors: [stairBehavior(actions)],
     flags: { floorer: { role: ROLES.STAIR, levelId: lower.id, targetLevelId: upper.id, managed: true, v: FLAG_VERSION } },

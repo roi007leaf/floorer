@@ -1,11 +1,11 @@
 import { SETTINGS } from "../constants.js";
 import { generateLevelData, visibilityFor } from "../model/levels.js";
-import { isManaged } from "../model/floor-plan.js";
+import { finiteOrNull, isManaged } from "../model/floor-plan.js";
 import { journal } from "../journal/journal.js";
 import { getSetting } from "../settings.js";
 
 function sameBand(a, b) {
-  return a.bottom === b.bottom && (a.top ?? null) === (b.top ?? null);
+  return finiteOrNull(a?.bottom) === finiteOrNull(b?.bottom) && finiteOrNull(a?.top) === finiteOrNull(b?.top);
 }
 
 export function parseImages(raw) {

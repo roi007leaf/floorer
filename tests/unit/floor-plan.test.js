@@ -1,4 +1,4 @@
-import { buildFloorPlan, surfaceLevels, orderPair, isManaged, findLevel } from "../../scripts/model/floor-plan.js";
+import { buildFloorPlan, surfaceLevels, orderPair, isManaged, findLevel, finiteOrNull, bandOf } from "../../scripts/model/floor-plan.js";
 
 const L = (id, bottom, top, vis = [id], flags = { floorer: { role: "level", managed: true } }) => ({
   id, _id: id, elevation: { bottom, top }, visibility: { levels: new Set(vis) }, flags,
@@ -57,4 +57,25 @@ test("findLevel", () => {
   const plan = buildFloorPlan({ levels: [L("f1", 0, 10)], regions: [] });
   expect(findLevel(plan, "f1").level.id).toBe("f1");
   expect(findLevel(plan, "nope")).toBeUndefined();
+});
+
+test("finiteOrNull maps non-finite to null", () => {
+  expect(finiteOrNull(5)).toBe(5);
+  expect(finiteOrNull(0)).toBe(0);
+  expect(finiteOrNull(Infinity)).toBeNull();
+  expect(finiteOrNull(-Infinity)).toBeNull();
+  expect(finiteOrNull(null)).toBeNull();
+  expect(finiteOrNull(undefined)).toBeNull();
+});
+
+test("bandOf normalises live and plain levels", () => {
+  expect(bandOf({ elevation: { bottom: 20, top: Infinity } })).toEqual({ bottom: 20, top: null });
+  expect(bandOf({ elevation: { bottom: -Infinity, top: 0 } })).toEqual({ bottom: null, top: 0 });
+  expect(bandOf({ elevation: { bottom: 0, top: 10 } })).toEqual({ bottom: 0, top: 10 });
+  expect(bandOf({})).toEqual({ bottom: null, top: null });
+});
+
+test("buildFloorPlan tolerates a null scene", () => {
+  expect(buildFloorPlan(null)).toEqual({ scene: null, levels: [] });
+  expect(buildFloorPlan({})).toEqual({ scene: {}, levels: [] });
 });

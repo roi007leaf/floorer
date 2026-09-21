@@ -23,3 +23,9 @@ test("panelContext rows", () => {
 test("issueKey handles a present docId", () => {
   expect(issueKey({ id: "x", levelId: "l", docId: "d" })).toBe("x:l:d");
 });
+
+test("band label prints infinities for live docs", () => {
+  const plan = buildFloorPlan({ levels: [L("b", -Infinity, 0, ["b"], "basement"), L("r", 10, Infinity, ["r"], "roof")], regions: [] });
+  const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false });
+  expect(ctx.rows.map((r) => r.band)).toEqual(["10–∞", "-∞–0"]);
+});

@@ -3,10 +3,10 @@ import { buildFloorPlan } from "../../scripts/model/floor-plan.js";
 
 const L = (id, bottom, top, vis) => ({ id, _id: id, name: id, elevation: { bottom, top }, visibility: { levels: new Set(vis) }, flags: { floorer: { role: "level", managed: true } } });
 const S = (id, levelId, { levels, elevation, holes = [] }) => ({
-  id, _id: id, levels: new Set(levels), elevation, shapes: [], flags: { floorer: { role: "surface", levelId, holes, managed: true } },
+  id, _id: id, levels: new Set(levels), elevation: { topInclusive: true, ...elevation }, shapes: [], flags: { floorer: { role: "surface", levelId, holes, managed: true } },
 });
 const ST = (id, levelId, targetLevelId, { levels, elevation }) => ({
-  id, _id: id, levels: new Set(levels), elevation, shapes: [{ type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: false }], flags: { floorer: { role: "stair", levelId, targetLevelId, managed: true } },
+  id, _id: id, levels: new Set(levels), elevation: { topInclusive: true, ...elevation }, shapes: [{ type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: false }], flags: { floorer: { role: "stair", levelId, targetLevelId, managed: true } },
 });
 const ids = (issues) => issues.map((i) => i.id);
 
@@ -48,7 +48,37 @@ test("surface-levels fix rewrites levels", () => {
 test("surface-band fix rewrites elevation", () => {
   const plan = buildFloorPlan({ levels: [f1()], regions: [S("s1", "f1", { levels: ["f1"], elevation: { bottom: 0, top: 5 } })] });
   const issue = lint(plan).find((i) => i.id === "surface-band");
-  expect(issue.fix.data).toEqual({ _id: "s1", elevation: { bottom: 0, top: 10 }, topInclusive: true });
+  expect(issue.fix.data).toEqual({ _id: "s1", elevation: { bottom: 0, top: 10, topInclusive: true } });
+});
+
+test("surface-band flags a surface whose top is not inclusive", () => {
+  const plan = buildFloorPlan({ levels: [f1()], regions: [S("s1", "f1", { levels: ["f1"], elevation: { bottom: 0, top: 10, topInclusive: false } })] });
+  const issue = lint(plan).find((i) => i.id === "surface-band");
+  expect(issue.fix.data).toEqual({ _id: "s1", elevation: { bottom: 0, top: 10, topInclusive: true } });
+});
+
+test("live roof level and surface with Infinity top are clean", () => {
+  const roof = L("r", 10, Infinity, ["f1", "r"]);
+  const plan = buildFloorPlan({ levels: [f1(), roof], regions: [
+    S("s1", "f1", { levels: ["f1", "r"], elevation: { bottom: 0, top: 10 } }),
+    S("sr", "r", { levels: ["r"], elevation: { bottom: 10, top: Infinity } }),
+  ] });
+  expect(lint(plan)).toEqual([]);
+});
+
+test("surface-band fix on a live roof writes a null top", () => {
+  const roof = L("r", 10, Infinity, ["r"]);
+  const plan = buildFloorPlan({ levels: [roof], regions: [S("sr", "r", { levels: ["r"], elevation: { bottom: 10, top: 30 } })] });
+  const issue = lint(plan).find((i) => i.id === "surface-band");
+  expect(issue.fix.data).toEqual({ _id: "sr", elevation: { bottom: 10, top: null, topInclusive: true } });
+});
+
+test("level-overlap treats live Infinity top as open", () => {
+  const plan = buildFloorPlan({ levels: [L("r", 10, Infinity, ["r"]), L("x", 15, 20, ["x"])], regions: [
+    S("sr", "r", { levels: ["r"], elevation: { bottom: 10, top: Infinity } }),
+    S("sx", "x", { levels: ["x"], elevation: { bottom: 15, top: 20 } }),
+  ] });
+  expect(ids(lint(plan))).toContain("level-overlap");
 });
 
 test("hole-unmirrored fix appends mirror to level below", () => {
@@ -82,7 +112,7 @@ test("stair-levels and stair-band", () => {
   const issues = lint(plan);
   expect(ids(issues)).toEqual(expect.arrayContaining(["stair-levels", "stair-band"]));
   expect(issues.find((i) => i.id === "stair-levels").fix.data.levels).toEqual(["f1", "f2"]);
-  expect(issues.find((i) => i.id === "stair-band").fix.data).toEqual({ _id: "st", elevation: { bottom: 0, top: 10 }, topInclusive: true });
+  expect(issues.find((i) => i.id === "stair-band").fix.data).toEqual({ _id: "st", elevation: { bottom: 0, top: 10, topInclusive: true } });
 });
 
 test("stair-target-missing", () => {
