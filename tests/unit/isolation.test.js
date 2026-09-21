@@ -52,3 +52,10 @@ test("onRefresh dims only when active", () => {
   expect(p.eventMode).toBe("static");
   isolation.setActive(false);
 });
+
+test("alphaFor keeps stairs visible on both connected levels", () => {
+  const active = { id: "f2", elevation: { bottom: 10, top: 20 } };
+  const stair = { flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2" } }, elevation: { bottom: 0, top: 10 } };
+  expect(isolation.alphaFor(stair, active)).toBeNull();
+  expect(isolation.alphaFor(stair, { id: "r", elevation: { bottom: 20, top: null } })).toBe(0.12);
+});

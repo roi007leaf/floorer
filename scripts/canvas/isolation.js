@@ -15,6 +15,12 @@ function elevationOf(doc) {
   return undefined;
 }
 
+function homeLevels(doc) {
+  const flag = doc.flags?.floorer;
+  if (!flag?.levelId) return [];
+  return flag.targetLevelId ? [flag.levelId, flag.targetLevelId] : [flag.levelId];
+}
+
 class Isolation {
   #active = false;
 
@@ -26,8 +32,8 @@ class Isolation {
 
   alphaFor(doc, activeLevel) {
     if (!activeLevel) return null;
-    const home = doc.flags?.floorer?.levelId;
-    if (home) return home === activeLevel.id ? null : ISOLATION_ALPHA;
+    const homes = homeLevels(doc);
+    if (homes.length) return homes.includes(activeLevel.id) ? null : ISOLATION_ALPHA;
     const elevation = elevationOf(doc);
     if (elevation === undefined) return null;
     return inBand(elevation, bandOf(activeLevel)) ? null : ISOLATION_ALPHA;
