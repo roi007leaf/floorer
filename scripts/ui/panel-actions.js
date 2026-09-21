@@ -14,11 +14,19 @@ function isSealed(entry) {
   return vis.length === 1 && vis[0] === entry.level.id;
 }
 
-function targetsFor(entry, plan) {
-  return plan.levels.filter((e) => e !== entry).map((e) => ({ id: e.level.id, name: e.level.name })).reverse();
+function defaultTargetId(entry) {
+  return entry.above?.level.id ?? entry.below?.level.id ?? null;
 }
 
-function row(entry, plan, activeLevelId) {
+function targetsFor(entry, plan) {
+  const def = defaultTargetId(entry);
+  return plan.levels
+    .filter((e) => e !== entry)
+    .map((e) => ({ id: e.level.id, name: e.level.name, selected: e.level.id === def }))
+    .reverse();
+}
+
+function row(entry, plan, activeLevelId, issues) {
   return {
     id: entry.level.id,
     name: entry.level.name,
@@ -30,11 +38,17 @@ function row(entry, plan, activeLevelId) {
     stairCount: entry.stairs.length,
     sealed: isSealed(entry),
     targets: targetsFor(entry, plan),
+    defaultTargetId: defaultTargetId(entry),
+    issues: issues.filter((i) => i.levelId === entry.level.id),
   };
 }
 
 export function issueKey(issue) {
   return `${issue.id}:${issue.levelId}:${issue.docId ?? ""}`;
+}
+
+function isAutoFix(issue) {
+  return !!issue.fix && !issue.fix.intent && !issue.fix.prompt;
 }
 
 function intentContext(plan, intent) {
@@ -43,10 +57,13 @@ function intentContext(plan, intent) {
 }
 
 export function panelContext(plan, { activeLevelId, issues, intent, journalSize, isolationEnabled }) {
+  const decorated = issues.map((i) => ({ ...i, fixable: !!i.fix, key: issueKey(i) }));
   return {
     sceneName: plan.scene?.name ?? "",
-    rows: plan.levels.map((e) => row(e, plan, activeLevelId)).reverse(),
-    issues: issues.map((i) => ({ ...i, fixable: !!i.fix, key: issueKey(i) })),
+    rows: plan.levels.map((e) => row(e, plan, activeLevelId, decorated)).reverse(),
+    issues: decorated,
+    issueCount: decorated.length,
+    autoFixCount: decorated.filter(isAutoFix).length,
     intent: intentContext(plan, intent),
     journalSize,
     isolationEnabled,

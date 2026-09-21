@@ -1,31 +1,78 @@
 <div class="floorer-setup-body">
-<div class="form-group">
-  <label>{{localize "FLOORER.Setup.FloorsAbove"}}</label>
-  <input type="number" name="floorsAbove" min="0" step="1" value="{{floorsAbove}}">
-</div>
-<div class="form-group">
-  <label>{{localize "FLOORER.Setup.Basements"}}</label>
-  <input type="number" name="basements" min="0" step="1" value="{{basements}}">
-</div>
-<div class="form-group">
-  <label>{{localize "FLOORER.Setup.Roof"}}</label>
-  <input type="checkbox" name="roof" {{#if roof}}checked{{/if}}>
-</div>
-<div class="form-group">
-  <label>{{localize "FLOORER.Setup.FloorHeight"}}</label>
-  <input type="number" name="floorHeight" min="1" step="any" value="{{floorHeight}}">
-</div>
-<div class="form-group">
-  <label>{{localize "FLOORER.Setup.GroundBottom"}}</label>
-  <input type="number" name="groundBottom" step="any" value="{{groundBottom}}">
-</div>
-<div class="form-group stacked">
-  <label>{{localize "FLOORER.Setup.Images"}}</label>
-  <p class="hint">{{localize "FLOORER.Setup.ImagesHint"}}</p>
-  <textarea name="images" rows="5">{{images}}</textarea>
-  <button type="button" data-action="pickImages"><i class="fas fa-file-image"></i> {{localize "FLOORER.Setup.AddImage"}}</button>
-</div>
-<footer class="form-footer">
-  <button type="submit"><i class="fas fa-layer-group"></i> {{localize "FLOORER.Setup.Submit"}}</button>
-</footer>
+  <div class="columns">
+    <div class="column fields">
+      <div class="field">
+        <label for="{{id}}-floorsAbove">{{localize "FLOORER.Setup.FloorsAbove"}}</label>
+        <div class="stepper">
+          <button type="button" class="icon" data-action="step" data-field="floorsAbove" data-delta="-1" title="{{localize 'FLOORER.Setup.Fewer'}}"><i class="fas fa-minus"></i></button>
+          <input type="number" id="{{id}}-floorsAbove" name="floorsAbove" min="0" step="1" value="{{floorsAbove}}">
+          <button type="button" class="icon" data-action="step" data-field="floorsAbove" data-delta="1" title="{{localize 'FLOORER.Setup.More'}}"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="{{id}}-basements">{{localize "FLOORER.Setup.Basements"}}</label>
+        <div class="stepper">
+          <button type="button" class="icon" data-action="step" data-field="basements" data-delta="-1" title="{{localize 'FLOORER.Setup.Fewer'}}"><i class="fas fa-minus"></i></button>
+          <input type="number" id="{{id}}-basements" name="basements" min="0" step="1" value="{{basements}}">
+          <button type="button" class="icon" data-action="step" data-field="basements" data-delta="1" title="{{localize 'FLOORER.Setup.More'}}"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="{{id}}-roof">{{localize "FLOORER.Setup.Roof"}}</label>
+        <label class="toggle">
+          <input type="checkbox" id="{{id}}-roof" name="roof" {{#if roof}}checked{{/if}}>
+          <span>{{localize "FLOORER.Setup.RoofHint"}}</span>
+        </label>
+      </div>
+      <div class="field">
+        <label for="{{id}}-floorHeight">{{localize "FLOORER.Setup.FloorHeight"}}</label>
+        <div class="unit">
+          <input type="number" id="{{id}}-floorHeight" name="floorHeight" min="1" step="any" value="{{floorHeight}}">
+          <span class="unit-label">{{units}}</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="{{id}}-groundBottom">{{localize "FLOORER.Setup.GroundBottom"}}</label>
+        <div class="unit">
+          <input type="number" id="{{id}}-groundBottom" name="groundBottom" step="any" value="{{groundBottom}}">
+          <span class="unit-label">{{units}}</span>
+        </div>
+      </div>
+      {{#if canAdoptDefault}}
+      <label class="toggle adopt">
+        <input type="checkbox" name="adoptDefault" checked>
+        <span>{{localize "FLOORER.Setup.AdoptDefault"}}</span>
+      </label>
+      {{/if}}
+    </div>
+    <div class="column preview">
+      <span class="column-title">{{localize "FLOORER.Setup.Preview"}}</span>
+      <ul class="band-preview">
+        {{#each rows}}
+        <li data-key="{{key}}"><span class="name">{{name}}</span><span class="band">{{band}}</span></li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+
+  <div class="images">
+    <span class="column-title">{{localize "FLOORER.Setup.Images"}}</span>
+    <p class="hint">{{localize "FLOORER.Setup.ImagesHint"}}</p>
+    <ul class="image-rows">
+      {{#each rows}}
+      <li data-key="{{key}}">
+        <label>{{name}}</label>
+        <input type="text" name="image-{{key}}" placeholder="{{localize 'FLOORER.Setup.ImagePlaceholder'}}">
+        <button type="button" class="icon" data-action="browse" data-key="{{key}}" title="{{localize 'FLOORER.Setup.Browse'}}"><i class="fas fa-file-image"></i></button>
+      </li>
+      {{/each}}
+    </ul>
+  </div>
+
+  <p class="error" hidden></p>
+
+  <footer class="form-footer">
+    <button type="button" data-action="cancel">{{localize "FLOORER.Common.Cancel"}}</button>
+    <button type="submit" class="bright"><i class="fas fa-layer-group"></i> {{localize "FLOORER.Setup.Submit"}}</button>
+  </footer>
 </div>

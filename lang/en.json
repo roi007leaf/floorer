@@ -2,9 +2,18 @@
   "FLOORER": {
     "Title": "Floorer",
     "Settings": {
-      "mirrorHoles": { "Name": "Mirror holes into the level below", "Hint": "When a hole or stair is cut into a floor, cut the same opening into the ceiling of the level below." },
-      "autoTag": { "Name": "Auto-tag new placeables to the active level", "Hint": "Walls, tiles, sounds and notes placed while Floorer is open are tagged to the active level. Lights get elevation only and stay untagged so light spills through openings." },
-      "sealBasements": { "Name": "Seal basements by default", "Hint": "Generated basement levels see only themselves." }
+      "mirrorHoles": {
+        "Name": "Mirror holes into the level below",
+        "Hint": "When a hole or stair is cut into a floor, cut the same opening into the ceiling of the level below."
+      },
+      "autoTag": {
+        "Name": "Auto-tag new placeables to the active level",
+        "Hint": "Walls, tiles, sounds and notes placed while Floorer is open are tagged to the active level. Lights get elevation only and stay untagged so light spills through openings."
+      },
+      "sealBasements": {
+        "Name": "Seal basements by default",
+        "Hint": "Generated basement levels see only themselves."
+      }
     },
     "Intent": {
       "Armed": {
@@ -21,36 +30,54 @@
       "Title": "Set up levels",
       "FloorsAbove": "Floors above ground",
       "Basements": "Basements",
-      "Roof": "Add a roof level",
+      "Roof": "Roof level",
       "FloorHeight": "Floor height",
       "GroundBottom": "Ground floor bottom elevation",
-      "Images": "Floor images (one per line, bottom to top)",
-      "ImagesHint": "Basements first, then ground floor upward, then roof. Leave a line blank to skip.",
-      "AddImage": "Add image",
+      "Images": "Floor images",
+      "ImagesHint": "Optional background image per level. Leave a row blank to keep the scene background.",
       "Submit": "Create levels",
       "NoLevels": "Add at least one floor, basement or roof.",
       "ConflictTitle": "Existing levels differ",
       "Conflict": "These Floorer-managed levels do not match the new bands: {names}. Keep them and add only the new levels, or replace them?",
       "Keep": "Keep existing",
-      "Replace": "Replace"
+      "Replace": "Replace",
+      "RoofHint": "Add an open-topped roof level",
+      "Fewer": "Fewer",
+      "More": "More",
+      "Units": "units",
+      "Preview": "Levels",
+      "ImagePlaceholder": "path/to/floor.webp",
+      "Browse": "Browse for an image",
+      "AdoptDefault": "Use the existing default level as the ground floor",
+      "TooManyImages": "More images than levels were given; extra images were ignored."
     },
-    "Controls": { "Open": "Open Floorer" },
+    "Controls": {
+      "Open": "Open Floorer"
+    },
     "Panel": {
       "Setup": "Set up levels",
-      "Isolation": "Isolate active level",
+      "DimOthers": "Dim other floors",
+      "Rename": "Rename level",
       "HasSurface": "Surface defined",
       "NoSurface": "No surface yet",
+      "Holes": "Holes",
+      "Hole": "Hole",
       "Stairs": "Stairs",
+      "Stair": "Stair",
+      "StairTarget": "Stair target level",
       "Sealed": "Sealed (sees only itself)",
       "Footprint": "Footprint",
-      "WholeScene": "Whole scene",
-      "Holes": "Holes",
+      "DrawPolygon": "Draw footprint polygon",
+      "DrawRect": "Draw footprint rectangle",
+      "WholeScene": "Use the whole scene as the footprint",
       "DrawHole": "Draw hole",
       "DrawStair": "Draw stair",
-      "Adopt": "Manage with Floorer",
+      "Adopt": "Manage",
+      "AdoptHint": "Manage this level with Floorer",
       "FixAll": "Fix all",
       "Fix": "Fix",
       "NoIssues": "No issues",
+      "IssueCount": "{count} issues need attention",
       "Undo": "Undo",
       "Revert": "Revert session",
       "RevertTitle": "Revert Floorer session",
@@ -69,6 +96,9 @@
       "stair-band": "Stair is not in the lower level's elevation band.",
       "stair-target-missing": "Stair target level no longer exists.",
       "level-overlap": "Two managed levels overlap in elevation."
+    },
+    "Common": {
+      "Cancel": "Cancel"
     }
   }
 }

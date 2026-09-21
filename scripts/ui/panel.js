@@ -38,6 +38,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleIsolation: FloorerPanel.#onToggleIsolation,
       adopt: FloorerPanel.#onAdopt,
       cancelIntent: FloorerPanel.#onCancelIntent,
+      rename: FloorerPanel.#onRename,
     },
   };
 
@@ -84,9 +85,44 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender(context, options);
-    this.element.querySelectorAll("input[data-rename]").forEach((input) => {
-      input.addEventListener("change", (ev) => this.#rename(ev.currentTarget.dataset.rename, ev.currentTarget.value));
+    this.element.querySelectorAll(".level.managed .name").forEach((span) => {
+      span.addEventListener("dblclick", (ev) => {
+        ev.preventDefault();
+        this.#startRename(span);
+      });
     });
+  }
+
+  #nameSpan(levelId) {
+    return this.element.querySelector(`.level[data-level-id="${levelId}"] .name`);
+  }
+
+  #startRename(span) {
+    if (!span || span.dataset.editing) return;
+    span.dataset.editing = "true";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "rename-input";
+    input.value = span.dataset.name ?? span.textContent;
+    span.replaceWith(input);
+    let done = false;
+    const finish = (commit) => {
+      if (done) return;
+      done = true;
+      input.replaceWith(span);
+      delete span.dataset.editing;
+      if (commit) this.#rename(span.dataset.levelId, input.value.trim());
+    };
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") finish(true);
+      else if (ev.key === "Escape") finish(false);
+      else return;
+      ev.preventDefault();
+      ev.stopPropagation();
+    });
+    input.addEventListener("blur", () => finish(true));
+    input.focus();
+    input.select();
   }
 
   #subscribe() {
@@ -122,6 +158,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onActivate(_event, target) {
+    if (target.dataset.levelId === view.activeLevelId) return;
     await view.setLevel(target.dataset.levelId);
   }
 
@@ -179,5 +216,9 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #onCancelIntent() {
     intents.clear();
+  }
+
+  static #onRename(_event, target) {
+    this.#startRename(this.#nameSpan(target.dataset.levelId));
   }
 }
