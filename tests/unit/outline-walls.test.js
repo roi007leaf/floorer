@@ -1,4 +1,4 @@
-import { buildOutlineWalls, createInteriorWalls, removeLevelWalls, removeOutlineWalls } from "../../scripts/ui/panel-actions.js";
+import { buildOutlineWalls, removeLevelWalls, removeOutlineWalls } from "../../scripts/ui/panel-actions.js";
 import { journal } from "../../scripts/journal/journal.js";
 
 const rect = { type: "rectangle", x: 0, y: 0, width: 10, height: 10, rotation: 0, hole: false };
@@ -51,19 +51,4 @@ test("removeLevelWalls deletes outline and interior walls of the level, buildOut
   const other = sceneWith([wall("a", "f1"), interior]);
   await buildOutlineWalls(other, { level: { id: "f1" }, surface: { shapes: [rect] } });
   expect(other.deleteEmbeddedDocuments).toHaveBeenCalledWith("Wall", ["a"]);
-});
-
-test("createInteriorWalls journals one create with interior-role walls", async () => {
-  const scene = sceneWith([]);
-  expect(
-    await createInteriorWalls(scene, "f1", [
-      [0, 0, 10, 0],
-      [10, 0, 10, 10],
-    ]),
-  ).toBe(2);
-  const created = scene.createEmbeddedDocuments.mock.calls[0][1];
-  expect(created[1]).toMatchObject({ c: [10, 0, 10, 10], levels: ["f1"], flags: { floorer: { role: "interiorWall", levelId: "f1" } } });
-  expect(journal.size).toBe(1);
-  expect(await createInteriorWalls(scene, "f1", [])).toBe(0);
-  expect(journal.size).toBe(1);
 });

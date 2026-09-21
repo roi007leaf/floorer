@@ -23,19 +23,12 @@
       "Armed": {
         "footprint": "Draw the floor footprint for {level}. Esc to cancel.",
         "hole": "Draw a hole in the floor of {level}. Esc to cancel.",
-        "stair": "Draw the stair area on {level}. Esc to cancel.",
-        "door": "Click a wall to add a door. Esc to cancel.",
-        "window": "Click a wall to add a window. Esc to cancel."
+        "stair": "Draw the stair area on {level}. Esc to cancel."
       },
       "LevelMissing": "That level no longer exists.",
       "TargetMissing": "The stair target level no longer exists.",
       "SurfaceMissing": "Draw the floor footprint first, then cut holes.",
-      "WriteFailed": "Floorer could not update the surface regions.",
-      "NoWall": "No wall near that point.",
-      "Cut": {
-        "door": "Door added.",
-        "window": "Window added."
-      }
+      "WriteFailed": "Floorer could not update the surface regions."
     },
     "Setup": {
       "Title": "Set up levels",
@@ -127,11 +120,8 @@
         "StairEllipse": "Draw the stair area as an ellipse",
         "Walls": "Walls along this floor's outline. They block sight and movement on this level only.",
         "WallsBuild": "Build walls along this floor's outline (outer edge and holes), tagged to this level. Re-run after changing the footprint.",
-        "WallsRemove": "Remove the walls Floorer built or traced for this level",
-        "WallsTrace": "Experimental: detect dark wall lines in this level's image and add them as walls. Undo removes them all.",
-        "WallsDraw": "Draw walls by hand on this floor — new walls are tagged to it automatically",
-        "Door": "Click a wall to cut a door there (one grid wide)",
-        "Window": "Click a wall to cut a window there: blocks movement, lets sight and light through"
+        "WallsRemove": "Remove the walls Floorer built for this level",
+        "WallsDraw": "Draw walls by hand on this floor — new walls are tagged to it automatically"
       },
       "SealTooltip": "Sealed: this level sees only itself. Click to unseal.",
       "UnsealTooltip": "Click to seal: only this level will see itself.",
@@ -153,8 +143,7 @@
       "NothingToUndo": "Nothing to undo.",
       "NoTarget": "Pick a target level for the stair first.",
       "PickTarget": "Pick stair target level",
-      "NoScene": "Open a scene before using Floorer.",
-      "WallsNeedImage": "This level has no (unrotated) background image to trace."
+      "NoScene": "Open a scene before using Floorer."
     },
     "Issue": {
       "surface-missing": "No floor surface",
@@ -172,23 +161,6 @@
     },
     "Common": {
       "Cancel": "Cancel"
-    },
-    "WallTrace": {
-      "Title": "Trace interior walls",
-      "Hint": "Orange lines preview the walls that will be added. This is a best effort from the artwork — apply, then finish by hand with Draw walls.",
-      "EdgeStrength": "Edge strength",
-      "MinLength": "Minimum length",
-      "Count": "{count} walls",
-      "Loading": "Reading the level image…",
-      "Apply": "Apply",
-      "Created": "Added {count} interior walls.",
-      "NoImage": "Could not read the level image.",
-      "Tip": {
-        "EdgeStrength": "How much contrast a dark-to-light edge needs to count as a wall. Lower = more lines.",
-        "MinLength": "Traced walls shorter than this many grid squares are ignored."
-      },
-      "Computing": "Computing…",
-      "NoEdges": "No strong edges at this edge strength"
     }
   }
 }

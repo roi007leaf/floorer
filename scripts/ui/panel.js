@@ -8,9 +8,7 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { WallTraceDialog } from "./wall-trace-dialog.js";
-import { canTrace } from "../model/trace.js";
-import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, armWallEdit, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, removeLevelWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, removeLevelWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -59,10 +57,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleSeal: FloorerPanel.#onToggleSeal,
       buildWalls: FloorerPanel.#onBuildWalls,
       removeWalls: FloorerPanel.#onRemoveWalls,
-      traceWalls: FloorerPanel.#onTraceWalls,
       drawWalls: FloorerPanel.#onDrawWalls,
-      addDoor: FloorerPanel.#onWallEdit,
-      addWindow: FloorerPanel.#onWallEdit,
     },
   };
 
@@ -437,19 +432,8 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
   }
 
-  static #onTraceWalls(_event, target) {
-    const entry = this.#entry(target.dataset.levelId);
-    if (!entry) return;
-    if (!canTrace(entry.level)) return ui.notifications.warn(game.i18n.localize("FLOORER.Panel.WallsNeedImage"));
-    new WallTraceDialog({ scene: canvas.scene, entry }).render(true);
-  }
-
   static #onDrawWalls() {
     canvas.walls?.activate({ tool: "walls" });
-  }
-
-  static #onWallEdit(_event, target) {
-    armWallEdit(target.dataset.action === "addDoor" ? INTENTS.DOOR : INTENTS.WINDOW, target.dataset.levelId);
   }
 
   static async #onDeleteHole(_event, target) {

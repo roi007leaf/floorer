@@ -13,7 +13,7 @@ import { levelRemovalPlan } from "../model/level-remove.js";
 import { view } from "../canvas/view.js";
 import { isSealed, sealUpdates } from "../model/visibility.js";
 import { getSetting } from "../settings.js";
-import { interiorWallCreateData, isFloorerWall, isOutlineWall, outlineWallsFor } from "../model/walls.js";
+import { isFloorerWall, isOutlineWall, outlineWallsFor } from "../model/walls.js";
 
 function bandLabel(level) {
   const band = bandOf(level);
@@ -293,16 +293,6 @@ export async function removeLevelWalls(scene, entry) {
   return deleteWalls(scene, levelWalls(scene, entry.level.id));
 }
 
-export function outlineWallSegments(scene, levelId) {
-  return outlineWalls(scene, levelId).map((w) => Array.from(w.c));
-}
-
-export async function createInteriorWalls(scene, levelId, segments) {
-  const data = interiorWallCreateData(levelId, segments);
-  if (data.length) await journal.run({ op: "create", collection: "walls", scene }, () => scene.createEmbeddedDocuments("Wall", data));
-  return data.length;
-}
-
 export async function buildOutlineWalls(scene, entry) {
   const data = outlineWallsFor(entry);
   if (!data) return 0;
@@ -361,10 +351,6 @@ export async function removeLevel(scene, plan, levelId) {
 
 export function armDraw(kind, levelId, tool, targetLevelId) {
   intents.arm({ kind, levelId, tool, targetLevelId });
-}
-
-export function armWallEdit(kind, levelId) {
-  intents.arm({ kind, levelId, tool: "select" });
 }
 
 export { INTENTS };

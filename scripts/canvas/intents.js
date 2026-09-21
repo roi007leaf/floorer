@@ -3,7 +3,6 @@ import { buildFloorPlan, findLevel } from "../model/floor-plan.js";
 import { holeUpdates } from "../model/holes.js";
 import { movementActionKeys, stairCreateData, surfaceCreateData } from "../model/regions.js";
 import { stairOpeningUpdates } from "../model/stair-retarget.js";
-import { doorPiece, nearestWall, splitWallAt, windowPiece } from "../model/doors.js";
 import { journal } from "../journal/journal.js";
 import { getSetting } from "../settings.js";
 
@@ -34,36 +33,8 @@ function releaseRegions() {
   canvas.regions?.placeables?.forEach((p) => p.sheet?.rendered && p.sheet.close());
 }
 
-const WALL_EDITS = new Set([INTENTS.DOOR, INTENTS.WINDOW]);
-const WALL_HIT_FRACTION = 0.4;
-
-function isWallEdit(kind) {
-  return WALL_EDITS.has(kind);
-}
-
-function layerFor(kind) {
-  return isWallEdit(kind) ? "walls" : "regions";
-}
-
 function armedToolActive(intent) {
-  return ui.controls?.control?.name === layerFor(intent.kind) && ui.controls?.tool?.name === intent.tool;
-}
-
-function drawnWalls(scene) {
-  return Array.from(scene?.walls ?? []).filter((w) => w.object);
-}
-
-function cutPieces(wall, point, kind, width) {
-  const { pieces, door } = splitWallAt(wall.toObject(), point, width);
-  const middle = kind === INTENTS.DOOR ? doorPiece : (p) => windowPiece(p, { move: CONST.WALL_MOVEMENT_TYPES.NORMAL });
-  return pieces.map((p, i) => (i === door ? middle(p) : p));
-}
-
-async function cutWall(scene, wall, point, kind, width) {
-  const data = cutPieces(wall, point, kind, width);
-  const before = [wall.toObject()];
-  await journal.run({ op: "delete", collection: "walls", scene, before }, () => scene.deleteEmbeddedDocuments("Wall", [wall.id]));
-  await journal.run({ op: "create", collection: "walls", scene }, () => scene.createEmbeddedDocuments("Wall", data));
+  return ui.controls?.control?.name === "regions" && ui.controls?.tool?.name === intent.tool;
 }
 
 class Intents {
@@ -89,7 +60,7 @@ class Intents {
     releaseRegions();
     this.#arming = true;
     try {
-      canvas[layerFor(intent.kind)]?.activate({ tool: intent.tool });
+      canvas.regions?.activate({ tool: intent.tool });
     } finally {
       this.#arming = false;
     }
@@ -112,30 +83,6 @@ class Intents {
     const intent = this.#current;
     this.clear();
     return intent;
-  }
-
-  #boundViews = new WeakSet();
-
-  bindView(view) {
-    if (!view || this.#boundViews.has(view)) return;
-    this.#boundViews.add(view);
-    view.addEventListener("pointerdown", (event) => this.onViewPointerDown(event), { capture: true });
-  }
-
-  onViewPointerDown(event) {
-    const intent = this.#current;
-    if (!intent || !isWallEdit(intent.kind) || !canvas.scene) return;
-    if (event.button === 2) return this.clear();
-    if (event.button !== 0) return;
-    event.stopImmediatePropagation();
-    event.preventDefault();
-    const { x, y } = canvas.canvasCoordinatesFromClient({ x: event.clientX, y: event.clientY });
-    const wall = nearestWall(drawnWalls(canvas.scene), [x, y], canvas.grid.size * WALL_HIT_FRACTION);
-    if (!wall) return notify("warn", "FLOORER.Intent.NoWall", {});
-    this.#take();
-    cutWall(canvas.scene, wall, [x, y], intent.kind, canvas.grid.size)
-      .then(() => notify("info", `FLOORER.Intent.Cut.${intent.kind}`, {}))
-      .catch(() => notify("error", "FLOORER.Intent.WriteFailed", {}));
   }
 
   onPreCreateRegion(document, data, options, userId) {

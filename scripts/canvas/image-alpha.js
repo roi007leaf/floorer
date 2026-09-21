@@ -33,10 +33,6 @@ async function loadPixels(src, maxSize) {
   }
 }
 
-export async function loadImageData(src, maxSize = 2500) {
-  return loadPixels(src, maxSize);
-}
-
 export async function loadAlpha(src, maxSize = 512) {
   const image = await loadPixels(src, maxSize);
   if (!image) return null;

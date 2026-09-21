@@ -914,68 +914,9 @@
   }
 }
 
-.floorer-wall-trace {
-  .window-content {
-    padding: var(--floorer-pad) 12px 12px;
-  }
-
-  .floorer-wall-trace-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .hint {
-    margin: 0;
-    color: var(--floorer-muted);
-    font-size: 12px;
-    line-height: 1.4;
-  }
-
-  .fields {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) 48px;
-    align-items: center;
-    gap: 8px 10px;
-  }
-
-  .fields label {
-    white-space: nowrap;
-    cursor: help;
-  }
-
-  .fields input[type="range"] {
-    width: 100%;
-    margin: 0;
-  }
-
-  .fields output {
-    width: 48px;
-    text-align: right;
-    font-family: var(--font-monospace, monospace);
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: var(--floorer-text);
-  }
-
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 22px;
-  }
-
-  .count.busy {
-    color: var(--floorer-muted);
-    border-style: dashed;
-    background: transparent;
-  }
-}
-
 .floorer .floorer-head .help { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; color: var(--color-text-secondary, #999); cursor: help; }
 
-.floorer-setup .form-footer,
-.floorer-wall-trace .form-footer {
+.floorer-setup .form-footer {
   display: flex;
   justify-content: flex-end;
   gap: 8px;

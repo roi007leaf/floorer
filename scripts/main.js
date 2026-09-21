@@ -19,7 +19,6 @@ Hooks.on("canvasReady", () => {
   if (!game.user?.isGM) return;
   view.sync();
   isolation.refreshAll();
-  intents.bindView(canvas.app.view);
   if (!escBound) {
     escBound = true;
     document.addEventListener("keydown", (ev) => {
