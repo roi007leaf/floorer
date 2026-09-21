@@ -7,15 +7,11 @@ import { bandChangeUpdates } from "../model/band-edit.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
 import { holeRemovalUpdates, stairRemovalUpdates } from "../model/holes.js";
 import { view } from "../canvas/view.js";
+import { isSealed, sealUpdates } from "../model/visibility.js";
 
 function bandLabel(level) {
   const band = bandOf(level);
   return `${band.bottom ?? "-∞"}–${band.top ?? "∞"}`;
-}
-
-function isSealed(entry) {
-  const vis = Array.from(entry.level.visibility?.levels ?? []);
-  return vis.length === 1 && vis[0] === entry.level.id;
 }
 
 function defaultTargetId(entry) {
@@ -122,7 +118,7 @@ function row(entry, plan, activeLevelId, issues, { editingBandId, bandDraft, exp
     openingCount: holes.filter((h) => h.stairId).length,
     stairCount: entry.stairs.length + entry.arrivingStairs.length,
     stairLinks: stairLinks(entry, plan),
-    sealed: isSealed(entry),
+    sealed: isSealed(entry.level),
     targets: targetsFor(entry, plan),
     defaultTargetId: defaultTargetId(entry),
     issues: aggregateIssues(plan, issues.filter((i) => i.levelId === entry.level.id)),
@@ -286,4 +282,10 @@ export async function deleteStair(scene, plan, stairId) {
 
 export async function deleteHole(scene, plan, holeId) {
   await applyHoleRemovals(scene, holeRemovalUpdates(plan, holeId));
+}
+
+export async function applySeal(scene, plan, levelId, sealed) {
+  const { levels, regions, before } = sealUpdates(plan, levelId, sealed);
+  await runUpdates(scene, "levels", levels, before.levels);
+  await runUpdates(scene, "regions", regions, before.regions);
 }

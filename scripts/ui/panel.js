@@ -8,7 +8,7 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyBandChange, applyFix, armDraw, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -52,6 +52,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       locateHole: FloorerPanel.#onLocateHole,
       deleteStair: FloorerPanel.#onDeleteStair,
       deleteHole: FloorerPanel.#onDeleteHole,
+      toggleSeal: FloorerPanel.#onToggleSeal,
     },
   };
 
@@ -336,6 +337,12 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onDeleteStair(_event, target) {
     if (!(await FloorerPanel.#confirm("FLOORER.Panel.DeleteStairTitle", "FLOORER.Panel.ConfirmDeleteStair"))) return;
     await deleteStair(canvas.scene, this.plan, target.dataset.regionId);
+    this.render();
+  }
+
+  static async #onToggleSeal(_event, target) {
+    const sealed = target.dataset.sealed === "true";
+    await applySeal(canvas.scene, this.plan, target.dataset.levelId, !sealed);
     this.render();
   }
 

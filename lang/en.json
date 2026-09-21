@@ -88,7 +88,8 @@
         "StairTarget": "Level this stair connects to",
         "StairDraw": "Draw the stair area on this level"
       },
-      "Sealed": "Sealed (sees only itself)",
+      "SealTooltip": "Sealed: this level sees only itself. Click to unseal.",
+      "UnsealTooltip": "Click to seal: only this level will see itself.",
       "Footprint": "Footprint",
       "Adopt": "Manage",
       "AdoptHint": "Manage this level with Floorer",
