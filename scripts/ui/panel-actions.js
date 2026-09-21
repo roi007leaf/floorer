@@ -1,7 +1,8 @@
 import { FLAG_VERSION, INTENTS, ROLES } from "../constants.js";
 import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
-import { stairIndexUpdates, surfaceCreateData, wholeSceneShape } from "../model/regions.js";
+import { stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
+import { footprintShapesForLevel } from "./footprint.js";
 import { bandOf, findLevel } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
@@ -236,7 +237,7 @@ export async function applyFix(scene, issue, plan) {
 }
 
 export async function wholeSceneSurface(scene, entry, allLevels) {
-  const data = surfaceCreateData(entry.level, allLevels, [wholeSceneShape(scene.dimensions.sceneRect)]);
+  const data = surfaceCreateData(entry.level, allLevels, await footprintShapesForLevel(scene, entry.level));
   await journal.run({ op: "create", collection: "regions", scene }, () => scene.createEmbeddedDocuments("Region", [data]));
 }
 
