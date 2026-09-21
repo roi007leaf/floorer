@@ -45,7 +45,10 @@ test("onRefresh dims only when active and enabled", () => {
   isolation.setActive(true);
   isolation.onRefresh(p);
   expect(p.alpha).toBe(0.25);
+  expect(p.eventMode).toBe("none");
   p.document.elevation = 5;
+  p.eventMode = "static";
   isolation.onRefresh(p);
   expect(p.alpha).toBe(1);
+  expect(p.eventMode).toBe("static");
 });

@@ -47,7 +47,9 @@ class Isolation {
     if (!this.#active || !this.enabled) return;
     const level = view.activeLevel;
     if (!level) return;
-    placeable.alpha = this.alphaFor(placeable.document, level) ?? 1;
+    const alpha = this.alphaFor(placeable.document, level);
+    placeable.alpha = alpha ?? 1;
+    if (alpha !== null) placeable.eventMode = "none";
   }
 
   refreshAll() {
@@ -55,7 +57,7 @@ class Isolation {
       const layer = canvas?.[name];
       layer?.placeables?.forEach((p) => {
         if (!this.#active || !this.enabled) p.alpha = 1;
-        p.renderFlags?.set({ refresh: true });
+        p.renderFlags?.set({ refresh: true, refreshState: true });
       });
     }
   }
