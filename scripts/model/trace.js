@@ -241,13 +241,18 @@ export function canTrace(level) {
   return !!level.background?.src && !(level.textures?.rotation ?? 0);
 }
 
-export function traceFootprint(image, level, sceneRect, { epsilon = 1.5, maxPoints = 2000, fullCoverage = 0.98 } = {}) {
-  const threshold = level.background?.alphaThreshold ?? 0.75;
-  const { coverage, rings } = traceAlpha({ ...image, threshold });
-  if (coverage >= fullCoverage || !rings.some((r) => !r.hole)) return null;
+export function imageTransform(image, level, sceneRect) {
   const placement = imagePlacement(level, sceneRect, image.imageWidth, image.imageHeight);
   const sx = (image.imageWidth / image.width) * placement.scaleX;
   const sy = (image.imageHeight / image.height) * placement.scaleY;
   const transform = (x, y) => ({ x: placement.x + x * sx, y: placement.y + y * sy });
+  return { transform, sx, sy };
+}
+
+export function traceFootprint(image, level, sceneRect, { epsilon = 1.5, maxPoints = 2000, fullCoverage = 0.98 } = {}) {
+  const threshold = level.background?.alphaThreshold ?? 0.75;
+  const { coverage, rings } = traceAlpha({ ...image, threshold });
+  if (coverage >= fullCoverage || !rings.some((r) => !r.hole)) return null;
+  const { transform } = imageTransform(image, level, sceneRect);
   return ringsToShapes(simplifyRings(rings, epsilon, maxPoints), transform);
 }

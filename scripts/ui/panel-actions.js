@@ -13,7 +13,7 @@ import { levelRemovalPlan } from "../model/level-remove.js";
 import { view } from "../canvas/view.js";
 import { isSealed, sealUpdates } from "../model/visibility.js";
 import { getSetting } from "../settings.js";
-import { isOutlineWall, outlineWallsFor } from "../model/walls.js";
+import { interiorWallCreateData, isFloorerWall, isOutlineWall, outlineWallsFor } from "../model/walls.js";
 
 function bandLabel(level) {
   const band = bandOf(level);
@@ -138,6 +138,10 @@ function outlineWalls(scene, levelId) {
   return Array.from(scene?.walls ?? []).filter((w) => isOutlineWall(w, levelId));
 }
 
+export function levelWalls(scene, levelId) {
+  return Array.from(scene?.walls ?? []).filter((w) => isFloorerWall(w, levelId));
+}
+
 function row(entry, plan, activeLevelId, issues, { editingBandId, bandDraft, expanded }) {
   const holes = entry.surface?.flags?.floorer?.holes ?? [];
   const detail = details(entry, plan, expanded);
@@ -156,7 +160,7 @@ function row(entry, plan, activeLevelId, issues, { editingBandId, bandDraft, exp
     openingCount: holes.filter((h) => h.stairId).length,
     stairCount: entry.stairs.length + entry.arrivingStairs.length,
     stairLinks: stairLinks(entry, plan),
-    wallCount: outlineWalls(plan.scene, entry.level.id).length,
+    wallCount: levelWalls(plan.scene, entry.level.id).length,
     sealed: isSealed(entry.level),
     targets: targetsFor(entry, plan),
     defaultTargetId: defaultTargetId(entry),
@@ -274,12 +278,29 @@ export async function wholeSceneSurface(scene, entry, allLevels, { walls = false
   await mirrorHolesFromAbove(scene, entry.level.id);
 }
 
-export async function removeOutlineWalls(scene, entry) {
-  const walls = outlineWalls(scene, entry.level.id);
+async function deleteWalls(scene, walls) {
   if (!walls.length) return 0;
   const before = walls.map((w) => w.toObject());
   await journal.run({ op: "delete", collection: "walls", scene, before }, () => scene.deleteEmbeddedDocuments("Wall", walls.map((w) => w.id)));
   return walls.length;
+}
+
+export async function removeOutlineWalls(scene, entry) {
+  return deleteWalls(scene, outlineWalls(scene, entry.level.id));
+}
+
+export async function removeLevelWalls(scene, entry) {
+  return deleteWalls(scene, levelWalls(scene, entry.level.id));
+}
+
+export function outlineWallSegments(scene, levelId) {
+  return outlineWalls(scene, levelId).map((w) => Array.from(w.c));
+}
+
+export async function createInteriorWalls(scene, levelId, segments) {
+  const data = interiorWallCreateData(levelId, segments);
+  if (data.length) await journal.run({ op: "create", collection: "walls", scene }, () => scene.createEmbeddedDocuments("Wall", data));
+  return data.length;
 }
 
 export async function buildOutlineWalls(scene, entry) {

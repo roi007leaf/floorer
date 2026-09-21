@@ -1,4 +1,4 @@
-import { outlineSegments, outlineWallsFor, wallCreateData } from "../../scripts/model/walls.js";
+import { interiorWallCreateData, isFloorerWall, isOutlineWall, outlineSegments, outlineWallsFor, wallCreateData } from "../../scripts/model/walls.js";
 
 const rect = { type: "rectangle", x: 10, y: 20, width: 100, height: 50, rotation: 0, hole: false };
 
@@ -58,4 +58,20 @@ test("outlineWallsFor builds walls from the entry surface", () => {
   expect(walls).toHaveLength(4);
   expect(walls.every((w) => w.levels[0] === "f1" && w.flags.floorer.levelId === "f1")).toBe(true);
   expect(outlineWallsFor({ level: { id: "f1" }, surface: null })).toBeNull();
+});
+
+test("interiorWallCreateData tags traced walls with the interior role", () => {
+  const data = interiorWallCreateData("f1", [[0, 0, 10, 0]]);
+  expect(data).toEqual([{ c: [0, 0, 10, 0], levels: ["f1"], flags: { floorer: { role: "interiorWall", levelId: "f1", managed: true, v: 1 } } }]);
+});
+
+test("isFloorerWall matches both wall roles while isOutlineWall matches only outlines", () => {
+  const outline = { flags: { floorer: { role: "outlineWall", levelId: "f1" } } };
+  const interior = { flags: { floorer: { role: "interiorWall", levelId: "f1" } } };
+  expect(isFloorerWall(outline, "f1")).toBe(true);
+  expect(isFloorerWall(interior, "f1")).toBe(true);
+  expect(isFloorerWall(interior, "f2")).toBe(false);
+  expect(isFloorerWall({ flags: {} })).toBe(false);
+  expect(isOutlineWall(interior, "f1")).toBe(false);
+  expect(isOutlineWall(outline)).toBe(true);
 });

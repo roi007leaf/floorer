@@ -61,13 +61,23 @@ export function outlineSegments(shapes) {
   });
 }
 
-export function wallCreateData(levelId, segments) {
-  return segments.map((c) => ({ c, levels: [levelId], flags: { floorer: { role: ROLES.OUTLINE_WALL, levelId, managed: true, v: FLAG_VERSION } } }));
+export const WALL_ROLES = Object.freeze([ROLES.OUTLINE_WALL, ROLES.INTERIOR_WALL]);
+
+export function wallCreateData(levelId, segments, role = ROLES.OUTLINE_WALL) {
+  return segments.map((c) => ({ c, levels: [levelId], flags: { floorer: { role, levelId, managed: true, v: FLAG_VERSION } } }));
+}
+
+export function interiorWallCreateData(levelId, segments) {
+  return wallCreateData(levelId, segments, ROLES.INTERIOR_WALL);
+}
+
+export function isFloorerWall(doc, levelId, roles = WALL_ROLES) {
+  const flag = doc?.flags?.floorer;
+  return roles.includes(flag?.role) && (levelId === undefined || flag.levelId === levelId);
 }
 
 export function isOutlineWall(doc, levelId) {
-  const flag = doc?.flags?.floorer;
-  return flag?.role === ROLES.OUTLINE_WALL && (levelId === undefined || flag.levelId === levelId);
+  return isFloorerWall(doc, levelId, [ROLES.OUTLINE_WALL]);
 }
 
 export function outlineWallsFor(entry) {

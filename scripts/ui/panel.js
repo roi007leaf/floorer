@@ -8,7 +8,9 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, removeOutlineWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
+import { WallTraceDialog } from "./wall-trace-dialog.js";
+import { canTrace } from "../model/trace.js";
+import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, removeLevelWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -57,6 +59,8 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleSeal: FloorerPanel.#onToggleSeal,
       buildWalls: FloorerPanel.#onBuildWalls,
       removeWalls: FloorerPanel.#onRemoveWalls,
+      traceWalls: FloorerPanel.#onTraceWalls,
+      drawWalls: FloorerPanel.#onDrawWalls,
     },
   };
 
@@ -427,8 +431,19 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onRemoveWalls(_event, target) {
     const entry = this.#entry(target.dataset.levelId);
-    if (entry) await removeOutlineWalls(canvas.scene, entry);
+    if (entry) await removeLevelWalls(canvas.scene, entry);
     this.render();
+  }
+
+  static #onTraceWalls(_event, target) {
+    const entry = this.#entry(target.dataset.levelId);
+    if (!entry) return;
+    if (!canTrace(entry.level)) return ui.notifications.warn(game.i18n.localize("FLOORER.Panel.WallsNeedImage"));
+    new WallTraceDialog({ scene: canvas.scene, entry }).render(true);
+  }
+
+  static #onDrawWalls() {
+    canvas.walls?.activate({ tool: "walls" });
   }
 
   static async #onDeleteHole(_event, target) {
