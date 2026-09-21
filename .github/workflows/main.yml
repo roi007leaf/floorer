@@ -1,0 +1,84 @@
+name: Floorer CI & Release
+
+env:
+  project_url: 'https://github.com/${{ github.repository }}'
+  latest_manifest_url: 'https://github.com/${{ github.repository }}/releases/latest/download/module.json'
+  release_module_url: 'https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/floorer.zip'
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+        env:
+          NPM_CONFIG_AUDIT: false
+      - run: npm run lint
+      - run: npm test
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate module manifest
+        run: jq empty module.json
+
+      - name: Extract version from tag
+        id: get_version
+        if: github.event_name == 'release'
+        uses: battila7/get-version-action@v2
+
+      - name: Stamp manifest with release values
+        if: github.event_name == 'release'
+        run: |
+          jq --arg v "${{ steps.get_version.outputs.version-without-v }}" \
+             --arg url "${{ env.project_url }}" \
+             --arg manifest "${{ env.latest_manifest_url }}" \
+             --arg download "${{ env.release_module_url }}" \
+             '.version = $v | .url = $url | .manifest = $manifest | .download = $download' \
+             module.json > module.tmp.json && mv module.tmp.json module.json
+          jq '{id, version, manifest, download}' module.json
+
+      - name: Create module archive
+        if: github.event_name == 'release'
+        run: zip --recurse-paths ./floorer.zip module.json README.md CHANGELOG.md LICENSE scripts/ styles/ templates/ lang/
+
+      - name: Attach files to the release
+        if: github.event_name == 'release'
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          name: ${{ github.event.release.name }}
+          draft: ${{ github.event.release.unpublished }}
+          prerelease: ${{ github.event.release.prerelease }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: './module.json, ./floorer.zip'
+          tag: ${{ github.event.release.tag_name }}
+          body: ${{ github.event.release.body }}
+
+  publish-to-foundry:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: ${{ github.event_name == 'release' && github.event.release.prerelease != true }}
+    steps:
+      - name: Publish to Foundry VTT
+        uses: JamesIves/fetch-api-data-action@v2
+        with:
+          endpoint: https://foundryvtt.com/_api/packages/release_version/
+          configuration: '{ "method": "POST", "headers": { "Content-Type": "application/json", "Authorization": "${{ secrets.FVTT_API_TOKEN }}" }, "body": { "id": "floorer", "dry-run": false, "release": { "version": "${{ github.event.release.tag_name }}", "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/module.json", "notes": "https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md", "compatibility": { "minimum": "14", "verified": "14", "maximum": "14" } } } }'
