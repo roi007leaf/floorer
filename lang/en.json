@@ -103,6 +103,7 @@
         "HoleEllipse": "Draw an elliptical hole in this floor",
         "Stair": "A connector between this level and the target. Tokens walking into it are prompted to change level. Floorer places the region in the lower level's band, tags both levels and cuts matching openings.",
         "StairTarget": "Level this stair connects to",
+        "StairTargetEdit": "Change which level this stair connects to",
         "StairPolygon": "Draw the stair area as a polygon",
         "StairRect": "Draw the stair area as a rectangle",
         "StairEllipse": "Draw the stair area as an ellipse"

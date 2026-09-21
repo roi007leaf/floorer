@@ -127,8 +127,8 @@ test("panelContext expands stair details with the other level and shape", () => 
   expect(f1.details).toEqual({
     kind: "stairs",
     items: [
-      { id: "s1", levelId: "f1", otherLevelId: "f2", color: "#e6194b", code: "S1", label: "↔ L2", jumpTooltip: 'FLOORER.Panel.JumpStair:{"level":"L2"}', shape: "10×20 @ 5,0" },
-      { id: "s2", levelId: "f2", otherLevelId: "f2", color: null, code: "S?", label: "↔ L2", jumpTooltip: 'FLOORER.Panel.JumpStair:{"level":"L2"}', shape: "polygon · 3 pts" },
+      { id: "s1", levelId: "f1", otherLevelId: "f2", color: "#e6194b", code: "S1", targets: [{ id: "f2", name: "L2", selected: true }], jumpTooltip: 'FLOORER.Panel.JumpStair:{"level":"L2"}', shape: "10×20 @ 5,0" },
+      { id: "s2", levelId: "f2", otherLevelId: "f2", color: null, code: "S?", targets: [{ id: "f2", name: "L2", selected: true }], jumpTooltip: 'FLOORER.Panel.JumpStair:{"level":"L2"}', shape: "polygon · 3 pts" },
     ],
   });
   expect(ctx.rows.find((r) => r.id === "f2").details).toBeNull();

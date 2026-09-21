@@ -571,16 +571,13 @@
       white-space: nowrap;
     }
 
-    button.label {
-      padding: 0;
-      border: 0;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-
-      &:hover {
-        color: var(--floorer-primary);
-      }
+    select.target {
+      flex: 0 1 auto;
+      width: 110px;
+      min-width: 0;
+      height: 22px;
+      padding: 0 4px;
+      font-size: 12px;
     }
 
     &.flash {

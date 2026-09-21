@@ -8,7 +8,7 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, renameLevel, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -111,6 +111,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     });
     this.#bindBandEditor();
+    this.#bindStairTargets();
     this.#paintSwatches();
     this.#bindStairHover();
     this.#ensureStairIndices();
@@ -126,6 +127,18 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     row.scrollIntoView({ block: "nearest" });
     row.classList.add("flash");
     row.addEventListener("animationend", () => row.classList.remove("flash"), { once: true });
+  }
+
+  #bindStairTargets() {
+    this.element.querySelectorAll('select[data-action="retargetStair"]').forEach((select) => {
+      select.addEventListener("change", () => this.#retargetStair(select));
+    });
+  }
+
+  async #retargetStair(select) {
+    const { regionId, levelId } = select.dataset;
+    await retargetStair(canvas.scene, this.plan, regionId, levelId, select.value);
+    this.render();
   }
 
   #paintSwatches() {

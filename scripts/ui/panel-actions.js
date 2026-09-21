@@ -7,6 +7,7 @@ import { bandOf, findLevel } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
 import { holeRemovalUpdates, stairRemovalUpdates } from "../model/holes.js";
+import { stairRetargetUpdates } from "../model/stair-retarget.js";
 import { levelRemovalPlan } from "../model/level-remove.js";
 import { view } from "../canvas/view.js";
 import { isSealed, sealUpdates } from "../model/visibility.js";
@@ -75,6 +76,13 @@ function stairCode(stair) {
   return index === undefined || index === null ? "S?" : `S${index + 1}`;
 }
 
+function stairTargets(entry, plan, otherId) {
+  return plan.levels
+    .filter((e) => e !== entry)
+    .map((e) => ({ id: e.level.id, name: e.level.name, selected: e.level.id === otherId }))
+    .reverse();
+}
+
 function stairItem(stair, entry, plan) {
   const otherId = otherLevelId(stair, entry);
   const other = findLevel(plan, otherId)?.level;
@@ -84,7 +92,7 @@ function stairItem(stair, entry, plan) {
     otherLevelId: otherId,
     color: stair.color ?? null,
     code: stairCode(stair),
-    label: `\u2194 ${other?.name ?? "?"}`,
+    targets: stairTargets(entry, plan, otherId),
     jumpTooltip: game.i18n.format("FLOORER.Panel.JumpStair", { level: other?.name ?? "?" }),
     shape: shapeSummary(firstShape(stair)),
   };
@@ -214,7 +222,7 @@ export async function applyBandChange(scene, plan, levelId, band) {
   await runUpdates(scene, "tokens", tokens, before.tokens);
 }
 
-async function retargetStair(scene, docId, plan) {
+async function promptStairTarget(scene, docId, plan) {
   const { DialogV2 } = foundry.applications.api;
   const options = plan.levels.map((e) => `<option value="${e.level.id}">${e.level.name}</option>`).join("");
   const targetId = await DialogV2.prompt({
@@ -232,7 +240,7 @@ export async function applyFix(scene, issue, plan) {
   const fix = issue.fix;
   if (!fix) return;
   if (fix.intent) return intents.arm({ kind: fix.intent, levelId: fix.levelId, tool: "polygon" });
-  if (fix.prompt === "stair-target") return retargetStair(scene, fix.docId, plan);
+  if (fix.prompt === "stair-target") return promptStairTarget(scene, fix.docId, plan);
   return applyUpdateFix(scene, fix);
 }
 
@@ -323,6 +331,19 @@ export async function deleteStair(scene, plan, stairId) {
   const before = [stair.toObject()];
   await journal.run({ op: "delete", collection: "regions", scene, before }, () => scene.deleteEmbeddedDocuments("Region", [stairId]));
   await applyHoleRemovals(scene, stairRemovalUpdates(plan, stairId));
+}
+
+async function applyHoleAdditions(scene, updates) {
+  const data = updates.map(({ ids, ...rest }) => rest);
+  await runUpdates(scene, "regions", data, data.map((d) => docBefore(scene, "regions", d)));
+}
+
+export async function retargetStair(scene, plan, stairId, fromLevelId, targetId) {
+  const result = stairRetargetUpdates(plan, stairId, fromLevelId, targetId);
+  if (!result) return;
+  await runUpdates(scene, "regions", [result.stair], [docBefore(scene, "regions", result.stair)]);
+  await applyHoleRemovals(scene, result.surfaceRemovals);
+  await applyHoleAdditions(scene, result.surfaceAdditions);
 }
 
 export async function deleteHole(scene, plan, holeId) {
