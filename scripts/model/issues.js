@@ -51,7 +51,7 @@ function holeIssues(entry) {
   const shapes = holeShapes(entry.surface);
   const done = mirroredIds(below.surface);
   return holes.flatMap((h, i) => {
-    if (h.mirrorOf || done.has(h.id) || !shapes[i]) return [];
+    if (h.stairId || h.mirrorOf || done.has(h.id) || !shapes[i]) return [];
     const data = holeAppendData(below.surface, [shapes[i]], { mirrorOf: [h.id] });
     return [issue("hole-unmirrored", entry.level.id, entry.surface.id, { collection: "regions", op: "update", data })];
   });

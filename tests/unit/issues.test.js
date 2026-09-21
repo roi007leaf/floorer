@@ -227,3 +227,12 @@ test("touching managed levels have no level-gap", () => {
   ] });
   expect(ids(lint(plan))).not.toContain("level-gap");
 });
+
+test("stair openings are never reported as unmirrored holes", () => {
+  const hole = { type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: true };
+  const s2 = S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 }, holes: [{ id: "h1", stairId: "st" }] });
+  s2.shapes = [hole];
+  const s1 = S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } });
+  const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [s1, s2] });
+  expect(ids(lint(plan))).not.toContain("hole-unmirrored");
+});
