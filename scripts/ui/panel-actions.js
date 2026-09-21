@@ -4,6 +4,9 @@ import { intents } from "../canvas/intents.js";
 import { surfaceCreateData, wholeSceneShape } from "../model/regions.js";
 import { bandOf, findLevel } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
+import { shapeCenter, shapeSummary } from "../model/shapes.js";
+import { holeRemovalUpdates, stairRemovalUpdates } from "../model/holes.js";
+import { view } from "../canvas/view.js";
 
 function bandLabel(level) {
   const band = bandOf(level);
@@ -48,14 +51,48 @@ function dedupeStairLinks(ids, plan) {
     grouped.get(key).count++;
   }
   return Array.from(grouped.values())
-    .map(({ level, count }) => `\u2194 ${level.name}${count > 1 ? ` \u00d7${count}` : ""}`)
+    .map(({ level, count }) => `${count}\u00d7 ${level.name}`)
     .join(", ");
 }
 
+function otherLevelId(stair, entry) {
+  const flag = stair.flags?.floorer ?? {};
+  return flag.levelId === entry.level.id ? flag.targetLevelId : flag.levelId;
+}
+
+function allStairs(entry) {
+  return [...entry.stairs, ...entry.arrivingStairs];
+}
+
 function stairLinks(entry, plan) {
-  const owned = entry.stairs.map((s) => s.flags?.floorer?.targetLevelId);
-  const arriving = entry.arrivingStairs.map((s) => s.flags?.floorer?.levelId);
-  return dedupeStairLinks([...owned, ...arriving], plan);
+  return dedupeStairLinks(allStairs(entry).map((s) => otherLevelId(s, entry)), plan);
+}
+
+function firstShape(region) {
+  return Array.from(region.shapes ?? [])[0] ?? null;
+}
+
+function stairItem(stair, entry, plan) {
+  const other = findLevel(plan, otherLevelId(stair, entry))?.level;
+  return { id: stair.id, levelId: stair.flags?.floorer?.levelId, label: `\u2194 ${other?.name ?? "?"}`, shape: shapeSummary(firstShape(stair)) };
+}
+
+function holeShapesOf(surface) {
+  return Array.from(surface?.shapes ?? []).filter((sh) => (typeof sh.toObject === "function" ? sh.toObject() : sh).hole);
+}
+
+function holeItems(entry) {
+  const holes = entry.surface?.flags?.floorer?.holes ?? [];
+  const shapes = holeShapesOf(entry.surface);
+  let n = 0;
+  return holes.flatMap((h, i) => (h.stairId ? [] : [{ id: h.id, n: ++n, shape: shapeSummary(shapes[i]) }]));
+}
+
+function details(entry, plan, expanded) {
+  if (!expanded || expanded.levelId !== entry.level.id) return null;
+  if (expanded.kind === "stairs") return { kind: "stairs", items: allStairs(entry).map((s) => stairItem(s, entry, plan)) };
+  if (expanded.kind === "holes") return { kind: "holes", items: holeItems(entry) };
+  return null;
 }
 
 function inputValue(v) {
@@ -67,9 +104,13 @@ function bandInputs(level, editing, draft) {
   return { editingBand: editing, bandBottom: inputValue(band.bottom), bandTop: inputValue(band.top) };
 }
 
-function row(entry, plan, activeLevelId, issues, { editingBandId, bandDraft }) {
+function row(entry, plan, activeLevelId, issues, { editingBandId, bandDraft, expanded }) {
   const holes = entry.surface?.flags?.floorer?.holes ?? [];
+  const detail = details(entry, plan, expanded);
   return {
+    details: detail,
+    expandedStairs: detail?.kind === "stairs",
+    expandedHoles: detail?.kind === "holes",
     id: entry.level.id,
     name: entry.level.name,
     band: bandLabel(entry.level),
@@ -101,11 +142,11 @@ function intentContext(plan, intent) {
   return { ...intent, levelName: findLevel(plan, intent.levelId)?.level.name ?? intent.levelId };
 }
 
-export function panelContext(plan, { activeLevelId, issues, intent, journalSize, isolationEnabled, editingBandId = null, bandDraft = null }) {
+export function panelContext(plan, { activeLevelId, issues, intent, journalSize, isolationEnabled, editingBandId = null, bandDraft = null, expanded = null }) {
   const decorated = issues.map((i) => ({ ...i, fixable: !!i.fix, key: issueKey(i) }));
   return {
     sceneName: plan.scene?.name ?? "",
-    rows: plan.levels.map((e) => row(e, plan, activeLevelId, decorated, { editingBandId, bandDraft })).reverse(),
+    rows: plan.levels.map((e) => row(e, plan, activeLevelId, decorated, { editingBandId, bandDraft, expanded })).reverse(),
     issues: decorated,
     issueCount: decorated.length,
     autoFixCount: decorated.filter(isAutoFix).length,
@@ -120,8 +161,13 @@ function elevationBefore(doc) {
   return { ...bandOf(doc), ...(inclusive === undefined ? {} : { topInclusive: inclusive }) };
 }
 
+function plainShapes(doc) {
+  return Array.from(doc.shapes ?? []).map((sh) => (typeof sh.toObject === "function" ? sh.toObject() : foundry.utils.deepClone(sh)));
+}
+
 function fieldBefore(doc, key) {
   if (key === "elevation") return elevationBefore(doc);
+  if (key === "shapes") return plainShapes(doc);
   if (key === "levels") return Array.from(doc.levels);
   return foundry.utils.deepClone(key.includes(".") ? foundry.utils.getProperty(doc, key) : doc[key]);
 }
@@ -199,3 +245,45 @@ export function armDraw(kind, levelId, tool, targetLevelId) {
 }
 
 export { INTENTS };
+
+async function focusLevel(levelId) {
+  if (levelId && levelId !== view.activeLevelId) await view.setLevel(levelId);
+}
+
+function panTo(center) {
+  if (center) canvas.animatePan({ x: center.x, y: center.y });
+}
+
+export async function locateRegion(scene, regionId) {
+  const region = scene.regions.get(regionId);
+  if (!region) return;
+  await focusLevel(region.flags?.floorer?.levelId);
+  panTo(shapeCenter(Array.from(region.shapes)[0]));
+  canvas.regions?.activate();
+  region.object?.control({ releaseOthers: true });
+}
+
+export async function locateHole(scene, entry, holeId) {
+  const holes = entry.surface?.flags?.floorer?.holes ?? [];
+  const index = holes.findIndex((h) => h.id === holeId);
+  if (index < 0) return;
+  await focusLevel(entry.level.id);
+  panTo(shapeCenter(holeShapesOf(entry.surface)[index]));
+}
+
+async function applyHoleRemovals(scene, updates) {
+  const data = updates.map(({ removed, ...rest }) => rest);
+  await runUpdates(scene, "regions", data, data.map((d) => docBefore(scene, "regions", d)));
+}
+
+export async function deleteStair(scene, plan, stairId) {
+  const stair = scene.regions.get(stairId);
+  if (!stair) return;
+  const before = [stair.toObject()];
+  await journal.run({ op: "delete", collection: "regions", scene, before }, () => scene.deleteEmbeddedDocuments("Region", [stairId]));
+  await applyHoleRemovals(scene, stairRemovalUpdates(plan, stairId));
+}
+
+export async function deleteHole(scene, plan, holeId) {
+  await applyHoleRemovals(scene, holeRemovalUpdates(plan, holeId));
+}

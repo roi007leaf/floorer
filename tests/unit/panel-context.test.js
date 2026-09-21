@@ -11,8 +11,8 @@ test("panelContext rows", () => {
   const ctx = panelContext(plan, { activeLevelId: "f1", issues: [{ id: "surface-missing", label: "x", levelId: "b", fix: { intent: "footprint", levelId: "b" } }], intent: null, journalSize: 2, isolationEnabled: true });
   expect(ctx.rows.map((r) => r.id)).toEqual(["r", "f1", "b"]);
   const f1 = ctx.rows[1];
-  expect(f1).toMatchObject({ active: true, hasSurface: true, holeCount: 1, openingCount: 1, stairCount: 1, stairLinks: "↔ r", band: "0–10", sealed: false });
-  expect(ctx.rows[0]).toMatchObject({ stairCount: 1, stairLinks: "↔ f1", openingCount: 0 });
+  expect(f1).toMatchObject({ active: true, hasSurface: true, holeCount: 1, openingCount: 1, stairCount: 1, stairLinks: "1× r", band: "0–10", sealed: false });
+  expect(ctx.rows[0]).toMatchObject({ stairCount: 1, stairLinks: "1× f1", openingCount: 0 });
   expect(f1.targets.map((t) => t.id)).toEqual(["r", "b"]);
   expect(ctx.rows[0].band).toBe("10–∞");
   expect(ctx.rows[2].sealed).toBe(true);
@@ -89,9 +89,9 @@ test("panelContext stair count includes owned and arriving stairs", () => {
   ] });
   const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false });
   const byId = Object.fromEntries(ctx.rows.map((r) => [r.id, r]));
-  expect(byId.f1).toMatchObject({ stairCount: 2, stairLinks: "\u2194 L2, \u2194 B1" });
-  expect(byId.f2).toMatchObject({ stairCount: 1, stairLinks: "\u2194 Ground" });
-  expect(byId.b).toMatchObject({ stairCount: 1, stairLinks: "\u2194 Ground" });
+  expect(byId.f1).toMatchObject({ stairCount: 2, stairLinks: "1\u00d7 L2, 1\u00d7 B1" });
+  expect(byId.f2).toMatchObject({ stairCount: 1, stairLinks: "1\u00d7 Ground" });
+  expect(byId.b).toMatchObject({ stairCount: 1, stairLinks: "1\u00d7 Ground" });
 });
 
 test("panelContext dedupes stairs to the same level and shows count", () => {
@@ -101,7 +101,7 @@ test("panelContext dedupes stairs to the same level and shows count", () => {
   ] });
   const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false });
   const f1 = ctx.rows.find((r) => r.id === "f1");
-  expect(f1).toMatchObject({ stairCount: 2, stairLinks: "\u2194 L2 \u00d72" });
+  expect(f1).toMatchObject({ stairCount: 2, stairLinks: "2\u00d7 L2" });
 });
 
 test("panelContext marks the row whose band is being edited with input values", () => {
@@ -113,4 +113,38 @@ test("panelContext marks the row whose band is being edited with input values", 
   const drafted = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false, editingBandId: "r", bandDraft: { bottom: "12", top: "" } });
   expect(drafted.rows.find((r) => r.id === "r")).toMatchObject({ bandBottom: "12", bandTop: "" });
   expect(drafted.rows.find((r) => r.id === "f1")).toMatchObject({ bandBottom: "0", bandTop: "10" });
+});
+
+const shape = (x) => ({ type: "rectangle", x, y: 0, width: 10, height: 20, rotation: 0, hole: true });
+
+test("panelContext expands stair details with the other level and shape", () => {
+  const plan = buildFloorPlan({ levels: [{ ...L("f1", 0, 10, ["f1"]), name: "Ground" }, { ...L("f2", 10, 20, ["f2"]), name: "L2" }], regions: [
+    { id: "s1", shapes: [{ ...shape(5), hole: false }], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", managed: true } } },
+    { id: "s2", shapes: [{ type: "polygon", points: [0, 0, 1, 0, 1, 1], hole: false }], flags: { floorer: { role: "stair", levelId: "f2", targetLevelId: "f1", managed: true } } },
+  ] });
+  const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false, expanded: { levelId: "f1", kind: "stairs" } });
+  const f1 = ctx.rows.find((r) => r.id === "f1");
+  expect(f1.details).toEqual({
+    kind: "stairs",
+    items: [
+      { id: "s1", levelId: "f1", label: "↔ L2", shape: "10×20 @ 5,0" },
+      { id: "s2", levelId: "f2", label: "↔ L2", shape: "polygon · 3 pts" },
+    ],
+  });
+  expect(ctx.rows.find((r) => r.id === "f2").details).toBeNull();
+});
+
+test("panelContext expands drawn holes only, numbered, with their shapes", () => {
+  const surface = { id: "sf", shapes: [{ ...shape(0), hole: false }, shape(1), shape(2), shape(3)], flags: { floorer: { role: "surface", levelId: "f1", managed: true, holes: [{ id: "h1" }, { id: "o", stairId: "st" }, { id: "h2" }] } } };
+  const plan = buildFloorPlan({ levels: [L("f1", 0, 10, ["f1"])], regions: [surface] });
+  const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false, expanded: { levelId: "f1", kind: "holes" } });
+  expect(ctx.rows[0].details).toEqual({
+    kind: "holes",
+    items: [
+      { id: "h1", n: 1, shape: "10×20 @ 1,0" },
+      { id: "h2", n: 2, shape: "10×20 @ 3,0" },
+    ],
+  });
+  expect(ctx.rows[0].expandedStairs).toBe(false);
+  expect(ctx.rows[0].expandedHoles).toBe(true);
 });

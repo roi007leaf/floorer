@@ -38,31 +38,50 @@
       <span class="spacer"></span>
       <span class="chips">
         {{#if hasSurface}}<span class="chip success" data-tooltip="{{localize 'FLOORER.Panel.HasSurface'}}"><i class="fas fa-check"></i></span>{{else}}<span class="chip muted" data-tooltip="{{localize 'FLOORER.Panel.NoSurface'}}"><i class="fas fa-xmark"></i></span>{{/if}}
-        {{#if holeCount}}<span class="chip" data-tooltip="{{localize 'FLOORER.Panel.Holes'}}"><i class="fas fa-circle-minus"></i>{{holeCount}}</span>{{/if}}
-        {{#if stairCount}}<span class="chip" data-tooltip="{{localize 'FLOORER.Panel.StairLinks' levels=stairLinks}}{{#if openingCount}} · {{localize 'FLOORER.Panel.StairOpenings' count=openingCount}}{{/if}}"><i class="fas fa-stairs"></i>{{stairCount}}</span>{{/if}}
+        {{#if holeCount}}<button type="button" class="chip {{#if expandedHoles}}active{{/if}}" data-action="toggleHoles" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.HoleSummary' holes=holeCount openings=openingCount}}"><i class="fas fa-circle-minus"></i>{{holeCount}}</button>{{/if}}
+        {{#if stairCount}}<button type="button" class="chip {{#if expandedStairs}}active{{/if}}" data-action="toggleStairs" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.StairSummary' count=stairCount links=stairLinks}}"><i class="fas fa-stairs"></i>{{stairCount}}</button>{{/if}}
         {{#if sealed}}<span class="chip info" data-tooltip="{{localize 'FLOORER.Panel.Sealed'}}"><i class="fas fa-lock"></i></span>{{/if}}
         {{#unless managed}}<button type="button" class="chip dashed" data-action="adopt" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.AdoptHint'}}"><i class="fas fa-hand"></i>{{localize "FLOORER.Panel.Adopt"}}</button>{{/unless}}
       </span>
     </div>
     {{#if editingBand}}<p class="error band-error" hidden>{{localize "FLOORER.Panel.BandInvalid"}}</p>{{/if}}
+    {{#if details}}
+    <ul class="row-details">
+      {{#each details.items}}
+      <li class="detail-row">
+        {{#if (eq ../details.kind "stairs")}}
+        <span class="label">{{label}}</span>
+        <span class="shape">{{shape}}</span>
+        <button type="button" class="icon" data-action="locateRegion" data-region-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Locate'}}"><i class="fas fa-crosshairs"></i></button>
+        <button type="button" class="icon danger" data-action="deleteStair" data-region-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Delete'}}"><i class="fas fa-trash"></i></button>
+        {{else}}
+        <span class="label">{{localize "FLOORER.Panel.HoleN" n=n}}</span>
+        <span class="shape">{{shape}}</span>
+        <button type="button" class="icon" data-action="locateHole" data-level-id="{{../id}}" data-hole-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Locate'}}"><i class="fas fa-crosshairs"></i></button>
+        <button type="button" class="icon danger" data-action="deleteHole" data-level-id="{{../id}}" data-hole-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Delete'}}"><i class="fas fa-trash"></i></button>
+        {{/if}}
+      </li>
+      {{/each}}
+    </ul>
+    {{/if}}
     {{#if active}}{{#if managed}}
     <div class="row-tools">
       <div class="group">
-        <span class="group-label">{{localize "FLOORER.Panel.Footprint"}}</span>
-        <button type="button" class="icon" data-action="drawFootprint" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.DrawPolygon'}}"><i class="fas fa-draw-polygon"></i></button>
-        <button type="button" class="icon" data-action="drawRect" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.DrawRect'}}"><i class="fas fa-vector-square"></i></button>
-        <button type="button" class="icon" data-action="wholeScene" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.WholeScene'}}"><i class="fas fa-expand"></i></button>
+        <span class="group-label" data-tooltip="{{localize 'FLOORER.Panel.Tip.Footprint'}}">{{localize "FLOORER.Panel.Footprint"}}</span>
+        <button type="button" class="icon" data-action="drawFootprint" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.FootprintPolygon'}}"><i class="fas fa-draw-polygon"></i></button>
+        <button type="button" class="icon" data-action="drawRect" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.FootprintRect'}}"><i class="fas fa-vector-square"></i></button>
+        <button type="button" class="icon" data-action="wholeScene" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.FootprintWhole'}}"><i class="fas fa-expand"></i></button>
       </div>
       <div class="group">
-        <span class="group-label">{{localize "FLOORER.Panel.Hole"}}</span>
-        <button type="button" class="icon" data-action="drawHole" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.DrawHole'}}"><i class="fas fa-circle-minus"></i></button>
+        <span class="group-label" data-tooltip="{{localize 'FLOORER.Panel.Tip.Hole'}}">{{localize "FLOORER.Panel.Hole"}}</span>
+        <button type="button" class="icon" data-action="drawHole" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.HoleDraw'}}"><i class="fas fa-circle-minus"></i></button>
       </div>
       <div class="group">
-        <span class="group-label">{{localize "FLOORER.Panel.Stair"}}</span>
-        <select name="target-{{id}}" data-tooltip="{{localize 'FLOORER.Panel.StairTarget'}}">
+        <span class="group-label" data-tooltip="{{localize 'FLOORER.Panel.Tip.Stair'}}">{{localize "FLOORER.Panel.Stair"}}</span>
+        <select name="target-{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.StairTarget'}}">
           {{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
         </select>
-        <button type="button" class="icon" data-action="drawStair" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.DrawStair'}}"><i class="fas fa-stairs"></i></button>
+        <button type="button" class="icon" data-action="drawStair" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.StairDraw'}}"><i class="fas fa-stairs"></i></button>
       </div>
     </div>
     {{/if}}{{/if}}

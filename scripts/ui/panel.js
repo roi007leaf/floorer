@@ -8,7 +8,7 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyBandChange, applyFix, armDraw, issueKey, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, armDraw, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -20,6 +20,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   #unsubscribe = [];
   #editingBandId = null;
   #bandDraft = null;
+  #expanded = null;
 
   static DEFAULT_OPTIONS = {
     id: `${MODULE_ID}-panel`,
@@ -45,6 +46,12 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       editBand: FloorerPanel.#onEditBand,
       commitBand: FloorerPanel.#onCommitBand,
       cancelBand: FloorerPanel.#onCancelBand,
+      toggleStairs: FloorerPanel.#onToggleDetails,
+      toggleHoles: FloorerPanel.#onToggleDetails,
+      locateRegion: FloorerPanel.#onLocateRegion,
+      locateHole: FloorerPanel.#onLocateHole,
+      deleteStair: FloorerPanel.#onDeleteStair,
+      deleteHole: FloorerPanel.#onDeleteHole,
     },
   };
 
@@ -79,6 +86,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       isolationEnabled: isolation.enabled,
       editingBandId: this.#editingBandId,
       bandDraft: this.#bandDraft,
+      expanded: this.#expanded,
     });
   }
 
@@ -302,5 +310,38 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #onCancelBand() {
     this.#cancelBand();
+  }
+
+  static #onToggleDetails(_event, target) {
+    const kind = target.dataset.action === "toggleStairs" ? "stairs" : "holes";
+    const levelId = target.dataset.levelId;
+    const same = this.#expanded?.levelId === levelId && this.#expanded?.kind === kind;
+    this.#expanded = same ? null : { levelId, kind };
+    this.render();
+  }
+
+  static async #onLocateRegion(_event, target) {
+    await locateRegion(canvas.scene, target.dataset.regionId);
+  }
+
+  static async #onLocateHole(_event, target) {
+    const entry = this.#entry(target.dataset.levelId);
+    if (entry) await locateHole(canvas.scene, entry, target.dataset.holeId);
+  }
+
+  static async #confirm(titleKey, contentKey) {
+    return DialogV2.confirm({ window: { title: titleKey }, content: `<p>${game.i18n.localize(contentKey)}</p>`, rejectClose: false });
+  }
+
+  static async #onDeleteStair(_event, target) {
+    if (!(await FloorerPanel.#confirm("FLOORER.Panel.DeleteStairTitle", "FLOORER.Panel.ConfirmDeleteStair"))) return;
+    await deleteStair(canvas.scene, this.plan, target.dataset.regionId);
+    this.render();
+  }
+
+  static async #onDeleteHole(_event, target) {
+    if (!(await FloorerPanel.#confirm("FLOORER.Panel.DeleteHoleTitle", "FLOORER.Panel.ConfirmDeleteHole"))) return;
+    await deleteHole(canvas.scene, this.plan, target.dataset.holeId);
+    this.render();
   }
 }

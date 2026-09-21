@@ -1,4 +1,4 @@
-import { toHoleShapes, holeAppendData, mirrorTargets, holeUpdates } from "../../scripts/model/holes.js";
+import { toHoleShapes, holeAppendData, mirrorTargets, holeUpdates, removeHolesData, stairRemovalUpdates, holeRemovalUpdates } from "../../scripts/model/holes.js";
 
 const rect = { type: "rectangle", x: 1, y: 2, width: 3, height: 4, rotation: 0, hole: false };
 const S = (id, holes = []) => ({ id, _id: id, shapes: [rect], flags: { floorer: { role: "surface", levelId: id, holes, managed: true } } });
@@ -66,4 +66,43 @@ test("holeAppendData merges extra fields into each hole entry", () => {
   ]);
   expect(holeAppendData(s, [rect], { extra: { stairId: "st" } })["flags.floorer.holes"][0]).toMatchObject({ stairId: "st" });
   expect(holeAppendData(s, [rect], {})["flags.floorer.holes"][0]).toEqual({ id: expect.any(String) });
+});
+
+const hole = (x) => ({ type: "rectangle", x, y: 0, width: 1, height: 1, rotation: 0, hole: true });
+const surfaceWith = (id, holes, holeShapes) => ({ id, _id: id, shapes: [rect, ...holeShapes], flags: { floorer: { role: "surface", levelId: id, holes, managed: true } } });
+
+test("removeHolesData drops matching entries and their shapes, keeping alignment", () => {
+  const s = surfaceWith("f1", [{ id: "a" }, { id: "b", stairId: "st" }, { id: "c" }], [hole(1), hole(2), hole(3)]);
+  const upd = removeHolesData(s, (h) => h.id === "b");
+  expect(upd._id).toBe("f1");
+  expect(upd["flags.floorer.holes"]).toEqual([{ id: "a" }, { id: "c" }]);
+  expect(upd.shapes).toEqual([rect, hole(1), hole(3)]);
+  expect(upd.removed).toEqual(["b"]);
+});
+
+test("removeHolesData returns null when nothing matches", () => {
+  const s = surfaceWith("f1", [{ id: "a" }], [hole(1)]);
+  expect(removeHolesData(s, () => false)).toBeNull();
+});
+
+test("stairRemovalUpdates removes openings and their mirrors on every surface", () => {
+  const upper = surfaceWith("f2", [{ id: "u1", stairId: "st" }, { id: "u2" }], [hole(1), hole(2)]);
+  const lower = surfaceWith("f1", [{ id: "l1", mirrorOf: "u1", stairId: "st" }, { id: "l2", mirrorOf: "u2" }], [hole(1), hole(2)]);
+  const plan = { levels: [FL("f1", lower), FL("f2", upper)] };
+  const out = stairRemovalUpdates(plan, "st");
+  expect(out.map((u) => u._id)).toEqual(["f1", "f2"]);
+  expect(out[0]["flags.floorer.holes"]).toEqual([{ id: "l2", mirrorOf: "u2" }]);
+  expect(out[1]["flags.floorer.holes"]).toEqual([{ id: "u2" }]);
+});
+
+test("holeRemovalUpdates removes the hole and its mirror below", () => {
+  const upper = surfaceWith("f2", [{ id: "u1" }, { id: "u2" }], [hole(1), hole(2)]);
+  const lower = surfaceWith("f1", [{ id: "l1", mirrorOf: "u1" }], [hole(1)]);
+  const plan = { levels: [FL("f1", lower), FL("f2", upper)] };
+  const out = holeRemovalUpdates(plan, "u1");
+  expect(out.map((u) => u._id)).toEqual(["f1", "f2"]);
+  expect(out[0]["flags.floorer.holes"]).toEqual([]);
+  expect(out[0].shapes).toEqual([rect]);
+  expect(out[1]["flags.floorer.holes"]).toEqual([{ id: "u2" }]);
+  expect(holeRemovalUpdates(plan, "zz")).toEqual([]);
 });
