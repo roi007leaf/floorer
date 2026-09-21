@@ -1,4 +1,4 @@
-import { toHoleShapes, holeAppendData, mirrorTargets, holeUpdates, removeHolesData, stairRemovalUpdates, holeRemovalUpdates } from "../../scripts/model/holes.js";
+import { toHoleShapes, holeAppendData, mirrorTargets, holeUpdates, removeHolesData, stairRemovalUpdates, holeRemovalUpdates, tracedHoleMirror } from "../../scripts/model/holes.js";
 
 const rect = { type: "rectangle", x: 1, y: 2, width: 3, height: 4, rotation: 0, hole: false };
 const S = (id, holes = []) => ({ id, _id: id, shapes: [rect], flags: { floorer: { role: "surface", levelId: id, holes, managed: true } } });
@@ -35,12 +35,6 @@ test("mirrorTargets for hole is level below with managed surface", () => {
   expect(mirrorTargets(FL("f1", S("f1"), FL("b", null)), "hole")).toEqual([]);
   const unmanaged = FL("b", { ...S("b"), flags: { floorer: { managed: false } } });
   expect(mirrorTargets(FL("f1", S("f1"), unmanaged), "hole")).toEqual([]);
-});
-
-test("mirrorTargets for stair is lower and upper surfaces", () => {
-  const above = FL("f2", S("f2"));
-  const me = FL("f1", S("f1"), null, above);
-  expect(mirrorTargets(me, "stair")).toEqual([me, above]);
 });
 
 test("holeUpdates writes own then mirror with mirrorOf", () => {
@@ -123,4 +117,27 @@ test("holeUpdates mirrors a polygon into the level below unchanged", () => {
   expect(upd[0].shapes[1]).toEqual({ ...polygon, hole: true });
   expect(upd[1].shapes[1]).toEqual({ ...polygon, hole: true });
   expect(upd[1]["flags.floorer.holes"][0].mirrorOf).toBe(upd[0].ids[0]);
+});
+
+test("tracedHoleMirror appends the traced holes to the managed surface below", () => {
+  const belowEntry = FL("b", S("b"));
+  const traced = surfaceWith("f1", [{ id: "h1" }, { id: "h2" }], [hole(1), hole(2)]);
+  const me = FL("f1", traced, belowEntry);
+  const plan = { levels: [belowEntry, me] };
+  const upd = tracedHoleMirror(plan, "f1");
+  expect(upd._id).toBe("b");
+  expect(upd.shapes).toEqual([rect, hole(1), hole(2)]);
+  expect(upd["flags.floorer.holes"]).toEqual([
+    { id: upd.ids[0], mirrorOf: "h1" },
+    { id: upd.ids[1], mirrorOf: "h2" },
+  ]);
+});
+
+test("tracedHoleMirror returns null without traced holes or a managed surface below", () => {
+  const me = FL("f1", S("f1"), FL("b", S("b")));
+  expect(tracedHoleMirror({ levels: [me] }, "f1")).toBeNull();
+  const traced = surfaceWith("f1", [{ id: "h1" }], [hole(1)]);
+  const unmanagedBelow = FL("b", { ...S("b"), flags: { floorer: { managed: false } } });
+  const meNoBelow = FL("f1", traced, unmanagedBelow);
+  expect(tracedHoleMirror({ levels: [unmanagedBelow, meNoBelow] }, "f1")).toBeNull();
 });

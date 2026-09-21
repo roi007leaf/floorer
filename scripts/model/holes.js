@@ -1,4 +1,4 @@
-import { isManaged } from "./floor-plan.js";
+import { findLevel, isManaged } from "./floor-plan.js";
 
 function plainShape(shape) {
   const obj = typeof shape.toObject === "function" ? shape.toObject() : shape;
@@ -29,8 +29,7 @@ function hasManagedSurface(entry) {
   return !!entry?.surface && isManaged(entry.surface);
 }
 
-export function mirrorTargets(floorLevel, kind) {
-  if (kind === "stair") return [floorLevel, floorLevel.above].filter(hasManagedSurface);
+export function mirrorTargets(floorLevel) {
   return [floorLevel.below].filter(hasManagedSurface);
 }
 
@@ -85,4 +84,17 @@ export function stairRemovalUpdates(plan, stairId) {
 
 export function holeRemovalUpdates(plan, holeId) {
   return removeAcross(plan, (h) => h.id === holeId || h.mirrorOf === holeId);
+}
+
+function surfaceHoleShapes(surface) {
+  return Array.from(surface.shapes ?? [])
+    .map(plainShape)
+    .filter((s) => s.hole);
+}
+
+export function tracedHoleMirror(plan, levelId) {
+  const entry = findLevel(plan, levelId);
+  const holes = entry?.surface?.flags?.floorer?.holes ?? [];
+  if (!holes.length || !hasManagedSurface(entry.below)) return null;
+  return holeAppendData(entry.below.surface, surfaceHoleShapes(entry.surface), { mirrorOf: holes.map((h) => h.id) });
 }

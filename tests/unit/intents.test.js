@@ -205,6 +205,20 @@ test("stair mirror skipped when setting off", async () => {
   expect(s.updateEmbeddedDocuments).not.toHaveBeenCalled();
 });
 
+test("non-adjacent stair cuts openings into its own two ends, skipping the level between", async () => {
+  const f1 = L("f1", 0, 10, ["f1", "f2", "f3"]);
+  const f2 = L("f2", 10, 20, ["f1", "f2", "f3"]);
+  const f3 = L("f3", 20, 30, ["f1", "f2", "f3"]);
+  const s1 = { ...S("s1", "f1"), elevation: { bottom: 0, top: 10, topInclusive: true } };
+  const s2 = { ...S("s2", "f2"), elevation: { bottom: 10, top: 20, topInclusive: true } };
+  const s3 = { ...S("s3", "f3"), elevation: { bottom: 20, top: 30, topInclusive: true } };
+  const s = scene([f1, f2, f3], [s1, s2, s3]);
+  const created = { id: "st", shapes: [rect], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f3", managed: true } } };
+  await intents.onCreateRegion(created, {}, "gm1");
+  const updates = s.updateEmbeddedDocuments.mock.calls[0][1];
+  expect(updates.map((u) => u._id).sort()).toEqual(["s1", "s3"]);
+});
+
 test("stair drawn as a polygon mirrors the polygon opening into both surfaces", async () => {
   const f1 = L("f1", 0, 10, ["f1", "f2"]);
   const f2 = L("f2", 10, 20, ["f1", "f2"]);

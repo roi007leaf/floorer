@@ -21,6 +21,10 @@ function band(level) {
   return { ...bandOf(level), topInclusive: true };
 }
 
+function holeEntriesFor(shapes) {
+  return shapes.filter((s) => s.hole).map(() => ({ id: foundry.utils.randomID() }));
+}
+
 export function surfaceCreateData(level, allLevels, shapes) {
   return {
     name: `Surface ${level.name}`,
@@ -28,7 +32,7 @@ export function surfaceCreateData(level, allLevels, shapes) {
     elevation: band(level),
     levels: surfaceLevels(level, allLevels),
     behaviors: [surfaceBehavior(level)],
-    flags: { floorer: { role: ROLES.SURFACE, levelId: level.id, holes: [], managed: true, v: FLAG_VERSION } },
+    flags: { floorer: { role: ROLES.SURFACE, levelId: level.id, holes: holeEntriesFor(shapes), managed: true, v: FLAG_VERSION } },
   };
 }
 

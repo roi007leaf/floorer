@@ -16,6 +16,18 @@ test("surfaceCreateData tags every viewing level", () => {
   expect(data.shapes).toBe(shapes);
 });
 
+test("surfaceCreateData registers a hole entry for every hole:true shape, in shape order", () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const holeA = { type: "rectangle", x: 1, y: 1, width: 2, height: 2, rotation: 0, hole: true };
+  const holeB = { type: "ellipse", x: 5, y: 5, radiusX: 1, radiusY: 1, rotation: 0, hole: true };
+  const tracedShapes = [shapes[0], holeA, holeB];
+  const data = surfaceCreateData(f1, [f1], tracedShapes);
+  expect(data.flags.floorer.holes).toHaveLength(2);
+  expect(data.flags.floorer.holes[0]).toEqual({ id: expect.any(String) });
+  expect(data.flags.floorer.holes[1]).toEqual({ id: expect.any(String) });
+  expect(data.flags.floorer.holes[0].id).not.toBe(data.flags.floorer.holes[1].id);
+});
+
 test("roof surface uses bottom placement", () => {
   expect(surfaceBehavior(L("r", 20, null, ["r"])).system.placement).toBe("bottom");
   expect(surfaceBehavior(L("r", 20, Infinity, ["r"])).system.placement).toBe("bottom");

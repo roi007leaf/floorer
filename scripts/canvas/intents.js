@@ -1,7 +1,8 @@
 import { INTENTS, ROLES, SETTINGS } from "../constants.js";
 import { buildFloorPlan, findLevel } from "../model/floor-plan.js";
-import { holeAppendData, holeUpdates, mirrorTargets } from "../model/holes.js";
+import { holeUpdates } from "../model/holes.js";
 import { movementActionKeys, stairCreateData, surfaceCreateData } from "../model/regions.js";
+import { stairOpeningUpdates } from "../model/stair-retarget.js";
 import { journal } from "../journal/journal.js";
 import { getSetting } from "../settings.js";
 
@@ -34,15 +35,6 @@ function releaseRegions() {
 
 function armedToolActive(intent) {
   return ui.controls?.control?.name === "regions" && ui.controls?.tool?.name === intent.tool;
-}
-
-function stairHoleUpdates(targets, lower, shapes, extra) {
-  const upper = targets.find((t) => t !== lower);
-  const own = targets.find((t) => t === lower);
-  if (!upper) return own ? [holeAppendData(own.surface, shapes, { extra })] : [];
-  const upperUpdate = holeAppendData(upper.surface, shapes, { extra });
-  if (!own) return [upperUpdate];
-  return [upperUpdate, holeAppendData(own.surface, shapes, { mirrorOf: upperUpdate.ids, extra })];
 }
 
 class Intents {
@@ -136,11 +128,7 @@ class Intents {
     if (userId !== game.user.id || flag?.role !== ROLES.STAIR || !canvas.scene) return;
     if (!getSetting(SETTINGS.MIRROR_HOLES)) return;
     const plan = buildFloorPlan(canvas.scene);
-    const lower = findLevel(plan, flag.levelId);
-    if (!lower) return;
-    const shapes = Array.from(document.shapes);
-    const extra = { stairId: document.id };
-    await applyHoleUpdates(canvas.scene, stairHoleUpdates(mirrorTargets(lower, INTENTS.STAIR), lower, shapes, extra));
+    await applyHoleUpdates(canvas.scene, stairOpeningUpdates(plan, document));
   }
 }
 

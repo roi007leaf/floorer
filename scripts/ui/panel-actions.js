@@ -1,16 +1,17 @@
-import { FLAG_VERSION, INTENTS, ROLES } from "../constants.js";
+import { FLAG_VERSION, INTENTS, ROLES, SETTINGS } from "../constants.js";
 import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
 import { stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
 import { footprintShapesForLevel } from "./footprint.js";
-import { bandOf, findLevel } from "../model/floor-plan.js";
+import { bandOf, buildFloorPlan, findLevel } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
-import { holeRemovalUpdates, stairRemovalUpdates } from "../model/holes.js";
+import { holeRemovalUpdates, stairRemovalUpdates, tracedHoleMirror } from "../model/holes.js";
 import { stairRetargetUpdates } from "../model/stair-retarget.js";
 import { levelRemovalPlan } from "../model/level-remove.js";
 import { view } from "../canvas/view.js";
 import { isSealed, sealUpdates } from "../model/visibility.js";
+import { getSetting } from "../settings.js";
 
 function bandLabel(level) {
   const band = bandOf(level);
@@ -247,6 +248,9 @@ export async function applyFix(scene, issue, plan) {
 export async function wholeSceneSurface(scene, entry, allLevels) {
   const data = surfaceCreateData(entry.level, allLevels, await footprintShapesForLevel(scene, entry.level));
   await journal.run({ op: "create", collection: "regions", scene }, () => scene.createEmbeddedDocuments("Region", [data]));
+  if (!getSetting(SETTINGS.MIRROR_HOLES)) return;
+  const update = tracedHoleMirror(buildFloorPlan(scene), entry.level.id);
+  if (update) await applyHoleAdditions(scene, [update]);
 }
 
 export async function adoptLevel(scene, level) {
