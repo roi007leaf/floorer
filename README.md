@@ -1,6 +1,6 @@
 # Floorer
 
-![Floorer demo: setup, traced floors, stair, level change](docs/floorer-demo.gif)
+**Demo video:** [docs/floorer-demo.mp4](docs/floorer-demo.mp4) — setup from floor images, traced floors, holes mirrored below, stairs, token level change, sight through openings, lint fixes, undo.
 
 Guided builder for Foundry VTT v14 multi-level scenes. GM only.
 
