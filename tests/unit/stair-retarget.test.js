@@ -67,3 +67,21 @@ test("additions build on the post-removal surface state and skip unmanaged or mi
   const unmanaged = { ...S("f3"), flags: { floorer: { role: "surface", levelId: "f3", holes: [], managed: false } } };
   expect(stairRetargetUpdates(planWith([f1, f2, unmanaged, stair("f1", "f2")]), "st", "f2", "f3").surfaceAdditions.map((u) => u._id)).toEqual(["f2"]);
 });
+
+test("additions keep the surface id when the same surface is also in removals (document-like surface)", () => {
+  class Doc {
+    constructor(data) {
+      Object.assign(this, data);
+    }
+    get id() {
+      return this._id;
+    }
+  }
+  const s1 = new Doc({ _id: "f1", shapes: [rect, opening], flags: { floorer: { role: "surface", levelId: "f1", holes: [{ id: "m", mirrorOf: "o", stairId: "st" }], managed: true } } });
+  const s2 = new Doc({ _id: "f2", shapes: [rect, opening], flags: { floorer: { role: "surface", levelId: "f2", holes: [{ id: "o", stairId: "st" }], managed: true } } });
+  const plan = planWith([s1, s2, S("f3"), stair("f1", "f2")]);
+  const out = stairRetargetUpdates(plan, "st", "f1", "f3");
+  expect(out.surfaceRemovals.map((u) => u._id).sort()).toEqual(["f1", "f2"]);
+  expect(out.surfaceAdditions.map((u) => u._id).sort()).toEqual(["f1", "f3"]);
+  expect(out.surfaceAdditions.every((u) => typeof u._id === "string")).toBe(true);
+});

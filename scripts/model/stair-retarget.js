@@ -20,7 +20,7 @@ function afterRemoval(surface, removals) {
   const removal = removals.find((u) => u._id === surface.id);
   if (!removal) return surface;
   const floorer = { ...surface.flags.floorer, holes: removal["flags.floorer.holes"] };
-  return { ...surface, shapes: removal.shapes, flags: { ...surface.flags, floorer } };
+  return { ...surface, id: surface.id, _id: surface.id, shapes: removal.shapes, flags: { ...surface.flags, floorer } };
 }
 
 function managedSurface(entry, removals) {
