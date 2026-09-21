@@ -151,6 +151,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   async #rename(levelId, name) {
     const entry = this.#entry(levelId);
     if (entry) await renameLevel(canvas.scene, entry.level, name);
+    this.render();
   }
 
   static #onSetup() {
@@ -176,12 +177,14 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const entry = findLevel(plan, target.dataset.levelId);
     if (!entry) return;
     await wholeSceneSurface(canvas.scene, entry, plan.levels.map((e) => e.level));
+    this.render();
   }
 
   static async #onFix(_event, target) {
     const plan = this.plan;
     const issue = lint(plan).find((i) => issueKey(i) === target.dataset.issueKey);
     if (issue) await applyFix(canvas.scene, issue, plan);
+    this.render();
   }
 
   static async #onFixAll() {
@@ -191,6 +194,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!issue) break;
       await applyFix(canvas.scene, issue, plan);
     }
+    this.render();
   }
 
   static async #onUndo() {
@@ -212,6 +216,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onAdopt(_event, target) {
     const entry = this.#entry(target.dataset.levelId);
     if (entry) await adoptLevel(canvas.scene, entry.level);
+    this.render();
   }
 
   static #onCancelIntent() {
