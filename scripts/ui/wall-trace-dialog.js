@@ -8,20 +8,44 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const IMAGE_MAX = 2500;
 const DEBOUNCE_MS = 150;
 const PREVIEW_COLOR = 0xff6400;
-const PREVIEW_WIDTH = 3;
+const PREVIEW_ALPHA = 0.95;
+const PREVIEW_WIDTH = 4;
+const PREVIEW_MIN_WIDTH = 3;
+const PREVIEW_DOT = 4;
+const PREVIEW_Z = 1000;
 const DEFAULTS = Object.freeze({ threshold: 0.28, minSquares: 0.5 });
 
 function previewLayer() {
-  return canvas.interface ?? canvas.controls ?? canvas.stage;
+  return canvas.controls ?? canvas.interface ?? canvas.stage;
+}
+
+function makePreview() {
+  const graphics = new PIXI.Graphics();
+  graphics.zIndex = PREVIEW_Z;
+  graphics.eventMode = "none";
+  return previewLayer().addChild(graphics);
+}
+
+function viewScale() {
+  return canvas.stage?.scale?.x || 1;
 }
 
 function drawPreview(graphics, segments) {
+  const scale = viewScale();
+  const width = Math.max(PREVIEW_MIN_WIDTH, PREVIEW_WIDTH / scale);
   graphics.clear();
-  graphics.lineStyle(PREVIEW_WIDTH, PREVIEW_COLOR, 1);
+  graphics.lineStyle({ width, color: PREVIEW_COLOR, alpha: PREVIEW_ALPHA });
   for (const [x1, y1, x2, y2] of segments) {
     graphics.moveTo(x1, y1);
     graphics.lineTo(x2, y2);
   }
+  graphics.lineStyle({ width: 0 });
+  graphics.beginFill(PREVIEW_COLOR, PREVIEW_ALPHA);
+  for (const [x1, y1, x2, y2] of segments) {
+    graphics.drawCircle(x1, y1, PREVIEW_DOT / scale);
+    graphics.drawCircle(x2, y2, PREVIEW_DOT / scale);
+  }
+  graphics.endFill();
 }
 
 export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -32,12 +56,13 @@ export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   #segments = [];
   #graphics = null;
   #timer = null;
+  #hooks = [];
 
   static DEFAULT_OPTIONS = {
     id: `${MODULE_ID}-wall-trace`,
     classes: ["floorer", "floorer-wall-trace"],
     window: { title: "FLOORER.WallTrace.Title", resizable: false },
-    position: { width: 360 },
+    position: { width: 420 },
     actions: { apply: WallTraceDialog.#onApply, cancel: WallTraceDialog.#onCancel },
   };
 
@@ -70,8 +95,16 @@ export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       ui.notifications.warn(game.i18n.localize("FLOORER.WallTrace.NoImage"));
       return this.close();
     }
-    this.#graphics = previewLayer().addChild(new PIXI.Graphics());
+    this.#graphics = makePreview();
+    this.#hooks = [
+      ["canvasPan", Hooks.on("canvasPan", () => this.#redraw())],
+      ["canvasTearDown", Hooks.on("canvasTearDown", () => this.close())],
+    ];
     this.#recompute();
+  }
+
+  #redraw() {
+    if (this.#graphics) drawPreview(this.#graphics, this.#segments);
   }
 
   #readParams() {
@@ -95,7 +128,7 @@ export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const level = this.#entry.level;
     const input = { image: this.#image, level, sceneRect: this.#scene.dimensions.sceneRect, gridSize: canvas.grid.size, outline: outlineWallSegments(this.#scene, level.id) };
     this.#segments = traceWallSegments(input, this.#params);
-    if (this.#graphics) drawPreview(this.#graphics, this.#segments);
+    this.#redraw();
     this.#showCount();
   }
 
@@ -108,6 +141,8 @@ export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   #clearPreview() {
     clearTimeout(this.#timer);
+    for (const [hook, id] of this.#hooks) Hooks.off(hook, id);
+    this.#hooks = [];
     if (this.#graphics) this.#graphics.destroy();
     this.#graphics = null;
   }
