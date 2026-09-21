@@ -10,7 +10,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const IMAGE_MAX = 1600;
 const DEBOUNCE_MS = 150;
 const PAN_MS = 400;
-const DEFAULTS = Object.freeze({ edgeStrength: 0.35, minSquares: 1.5 });
+const DEFAULTS = Object.freeze({ edgeStrength: 0.3, minSquares: 1 });
 const DECIMALS = Object.freeze({ edgeStrength: 2, minSquares: 1 });
 
 export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {

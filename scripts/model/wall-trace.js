@@ -264,7 +264,9 @@ export function nearSegment(point, seg, tol) {
 export function withoutOutline(segments, outline, tol = 6) {
   return segments.filter((s) => {
     const mid = [(s[0] + s[2]) / 2, (s[1] + s[3]) / 2];
-    return !outline.some((o) => nearSegment(mid, o, tol));
+    const a = [s[0], s[1]];
+    const b = [s[2], s[3]];
+    return !outline.some((o) => nearSegment(mid, o, tol) && nearSegment(a, o, tol) && nearSegment(b, o, tol));
   });
 }
 
@@ -290,5 +292,5 @@ export function traceWallSegments({ image, level, sceneRect, gridSize, outline }
   const { transform, sx, sy } = imageTransform(image, level, sceneRect);
   const pxPerSquare = gridSize / ((sx + sy) / 2);
   const { segments, stats } = traceInteriorWalls(image, { edgeStrength, minLength: minSquares * pxPerSquare, mergeGap: 0.4 * pxPerSquare });
-  return { segments: withoutOutline(segmentsToScene(segments, transform), outline), stats };
+  return { segments: withoutOutline(segmentsToScene(segments, transform), outline, gridSize * 0.3), stats };
 }
