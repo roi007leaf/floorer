@@ -1,4 +1,4 @@
-import { darkMask, nearSegment, openMask, polylineLength, polylinesToSegments, previewSvgLines, simplifyPolyline, skeletonToPolylines, thin, traceInteriorWalls, traceWallSegments, withoutOutline } from "../../scripts/model/wall-trace.js";
+import { edgeMask, grayscale, houghSegments, mergeParallel, nearSegment, previewSvgLines, segmentsBounds, segmentsToScene, sobelEdges, traceInteriorWalls, traceWallSegments, viewFit, withoutOutline } from "../../scripts/model/wall-trace.js";
 
 function image(rows, { dark = [0, 0, 0, 255], light = [255, 255, 255, 255], clear = [0, 0, 0, 0] } = {}) {
   const height = rows.length;
@@ -13,6 +13,17 @@ function image(rows, { dark = [0, 0, 0, 255], light = [255, 255, 255, 255], clea
   return { width, height, data };
 }
 
+function synthetic(width, height, paint, base = 153) {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const v = paint(x, y) ?? base;
+      data.set([v, v, v, 255], (y * width + x) * 4);
+    }
+  }
+  return { width, height, data };
+}
+
 function maskOf(rows) {
   const height = rows.length;
   const width = rows[0].length;
@@ -21,123 +32,119 @@ function maskOf(rows) {
   return { mask, width, height };
 }
 
-function rows(mask, width, height) {
-  const out = [];
-  for (let y = 0; y < height; y++) {
-    let row = "";
-    for (let x = 0; x < width; x++) row += mask[y * width + x] ? "#" : ".";
-    out.push(row);
-  }
-  return out;
-}
+const bandAndSeam = (x, y) => (y >= 100 && y <= 105 ? 0 : y === 150 ? 128 : undefined);
 
-test("darkMask keeps opaque dark pixels only", () => {
-  const img = image(["#. ", "##."]);
-  expect(Array.from(darkMask(img))).toEqual([1, 0, 0, 1, 1, 0]);
+test("grayscale converts to luminance and treats transparent pixels as white", () => {
+  const img = image(["#. "], { dark: [255, 0, 0, 255] });
+  const gray = Array.from(grayscale(img));
+  expect(gray[0]).toBeCloseTo(0.2126, 4);
+  expect(gray[1]).toBe(1);
+  expect(gray[2]).toBe(1);
 });
 
-test("darkMask honours threshold and alpha", () => {
-  const grey = image(["#"], { dark: [100, 100, 100, 255] });
-  expect(Array.from(darkMask(grey, { threshold: 0.28 }))).toEqual([0]);
-  expect(Array.from(darkMask(grey, { threshold: 0.5 }))).toEqual([1]);
-  const faint = image(["#"], { dark: [0, 0, 0, 100] });
-  expect(Array.from(darkMask(faint))).toEqual([0]);
-  expect(Array.from(darkMask(faint, { minAlpha: 0.3 }))).toEqual([1]);
+test("sobelEdges reports the contrast of a step edge and nothing on flat areas", () => {
+  const gray = Float32Array.from([1, 1, 1, 1, 1, 1, 1, 1, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]);
+  const mag = sobelEdges(gray, 4, 4);
+  expect(mag[1 * 4 + 1]).toBeCloseTo(0.6, 5);
+  expect(mag[2 * 4 + 1]).toBeCloseTo(0.6, 5);
+  expect(mag[0]).toBe(0);
+  expect(mag[3 * 4 + 3]).toBe(0);
 });
 
-test("thin reduces a thick horizontal bar to a one-pixel line", () => {
-  const { mask, width, height } = maskOf(["........", ".######.", ".######.", ".######.", "........"]);
-  const skel = thin(mask, width, height);
-  const out = rows(skel, width, height);
-  expect(out.filter((r) => r.includes("#"))).toHaveLength(1);
-  expect(out[2].replace(/\./g, "").length).toBeGreaterThanOrEqual(3);
+test("edgeMask thresholds magnitudes", () => {
+  expect(Array.from(edgeMask(Float32Array.from([0.1, 0.4, 0.9]), 0.35))).toEqual([0, 1, 1]);
 });
 
-test("thin leaves a single-pixel line untouched", () => {
-  const { mask, width, height } = maskOf(["......", ".####.", "......"]);
-  expect(rows(thin(mask, width, height), width, height)).toEqual(["......", ".####.", "......"]);
+test("houghSegments finds a straight run and ignores scattered pixels", () => {
+  const rows = ["............", ".##########.", "............", "............", "............", "............", "............", "..#....#....", "............"];
+  const { mask, width, height } = maskOf(rows);
+  const segs = houghSegments(mask, width, height, { minLength: 5, votes: 3 });
+  expect(segs).toHaveLength(1);
+  const [x1, y1, x2, y2] = segs[0];
+  expect([y1, y2]).toEqual([1, 1]);
+  expect(Math.min(x1, x2)).toBe(1);
+  expect(Math.max(x1, x2)).toBe(10);
 });
 
-test("skeletonToPolylines walks a straight line end to end", () => {
-  const { mask, width, height } = maskOf(["......", ".####.", "......"]);
-  const lines = skeletonToPolylines(mask, width, height);
-  expect(lines).toHaveLength(1);
-  expect(lines[0][0]).toEqual([1, 1]);
-  expect(lines[0].at(-1)).toEqual([4, 1]);
-  expect(lines[0]).toHaveLength(4);
+test("houghSegments bridges small gaps but not large ones", () => {
+  const { mask, width, height } = maskOf(["....................", ".####.####.....####.", "...................."]);
+  const segs = houghSegments(mask, width, height, { minLength: 6, maxGap: 1, votes: 3 });
+  expect(segs).toHaveLength(1);
+  expect(Math.abs(segs[0][2] - segs[0][0])).toBe(8);
 });
 
-test("skeletonToPolylines breaks at junctions", () => {
-  const { mask, width, height } = maskOf([".......", ".#####.", "...#...", "...#...", "...#..."]);
-  const lines = skeletonToPolylines(mask, width, height);
-  expect(lines).toHaveLength(3);
-  const ends = lines.map((l) => [l[0], l.at(-1)]);
-  expect(ends.every(([a, b]) => (a[0] === 3 && a[1] === 1) || (b[0] === 3 && b[1] === 1))).toBe(true);
-  expect(lines.some((l) => l.some(([x, y]) => x === 3 && y === 4))).toBe(true);
+test("houghSegments is deterministic", () => {
+  const { mask, width, height } = maskOf(["..............", ".############.", "..............", "..............", "..............", ".############.", ".............."]);
+  const a = houghSegments(mask, width, height, { minLength: 8, votes: 4 });
+  const b = houghSegments(mask, width, height, { minLength: 8, votes: 4 });
+  expect(a).toEqual(b);
+  expect(a).toHaveLength(2);
 });
 
-test("skeletonToPolylines walks closed loops once", () => {
-  const { mask, width, height } = maskOf([".....", ".###.", ".#.#.", ".###.", "....."]);
-  const lines = skeletonToPolylines(mask, width, height);
-  expect(lines).toHaveLength(1);
-  expect(lines[0]).toHaveLength(9);
-  expect(lines[0][0]).toEqual(lines[0].at(-1));
-});
-
-test("simplifyPolyline drops collinear points and keeps corners", () => {
-  const line = [
-    [0, 0],
-    [1, 0],
-    [2, 0],
-    [3, 0],
-    [3, 1],
-    [3, 2],
-  ];
-  expect(simplifyPolyline(line, 0.5)).toEqual([
-    [0, 0],
-    [3, 0],
-    [3, 2],
-  ]);
-  expect(simplifyPolyline([[0, 0]], 1)).toEqual([[0, 0]]);
-});
-
-test("polylineLength sums segment lengths", () => {
-  expect(
-    polylineLength([
-      [0, 0],
-      [3, 0],
-      [3, 4],
-    ]),
-  ).toBe(7);
-});
-
-test("traceInteriorWalls finds a dark line and drops short specks", () => {
-  const img = image(["..........", ".########.", "..........", "......#...", ".........."]);
-  const { polylines: lines, stats } = traceInteriorWalls(img, { threshold: 0.28, minLength: 3, epsilon: 0.5 });
-  expect(stats).toEqual({ maskPixels: 9, afterOpen: 9 });
-  expect(lines).toHaveLength(1);
-  expect(lines[0]).toEqual([
-    [1, 1],
-    [8, 1],
-  ]);
-});
-
-test("polylinesToSegments maps through the transform and rounds", () => {
-  const segs = polylinesToSegments(
+test("mergeParallel joins the two edges of a wall into its centerline", () => {
+  const merged = mergeParallel(
     [
-      [
-        [0, 0],
-        [1, 0],
-        [1, 1],
-      ],
-      [[5, 5]],
+      [0, 10, 100, 10],
+      [5, 16, 105, 16],
+    ],
+    8,
+  );
+  expect(merged).toHaveLength(1);
+  const [x1, y1, x2, y2] = merged[0];
+  expect(y1).toBeCloseTo(13, 5);
+  expect(y2).toBeCloseTo(13, 5);
+  expect(Math.min(x1, x2)).toBeCloseTo(0, 5);
+  expect(Math.max(x1, x2)).toBeCloseTo(105, 5);
+});
+
+test("mergeParallel joins collinear segments end to end and keeps distant or crossing ones", () => {
+  const merged = mergeParallel(
+    [
+      [0, 0, 40, 0],
+      [42, 0, 80, 0],
+      [0, 30, 80, 30],
+      [50, 40, 50, 90],
+    ],
+    4,
+  );
+  expect(merged).toHaveLength(3);
+  const long = merged.find(([, y1]) => Math.abs(y1) < 1e-6);
+  expect(Math.abs(long[2] - long[0])).toBeCloseTo(80, 5);
+});
+
+test("traceInteriorWalls yields one wall for a dark band and none for a faint seam", () => {
+  const img = synthetic(200, 200, bandAndSeam);
+  const { segments, stats } = traceInteriorWalls(img, { edgeStrength: 0.35, minLength: 50, mergeGap: 10 });
+  expect(stats.edgePixels).toBe(4 * 198);
+  expect(stats.rawSegments).toBeGreaterThanOrEqual(2);
+  expect(segments).toHaveLength(1);
+  const [x1, y1, x2, y2] = segments[0];
+  expect(Math.abs(y1 - 102.5)).toBeLessThanOrEqual(1.5);
+  expect(Math.abs(y2 - 102.5)).toBeLessThanOrEqual(1.5);
+  expect(Math.abs(x2 - x1)).toBeGreaterThanOrEqual(150);
+});
+
+test("traceInteriorWalls picks up the faint seam when the edge strength is lowered", () => {
+  const img = synthetic(200, 200, bandAndSeam);
+  const { segments } = traceInteriorWalls(img, { edgeStrength: 0.05, minLength: 50, mergeGap: 10 });
+  expect(segments).toHaveLength(2);
+});
+
+test("traceInteriorWalls returns nothing for a flat image", () => {
+  const { segments, stats } = traceInteriorWalls(synthetic(40, 40, () => undefined), { edgeStrength: 0.35, minLength: 5, mergeGap: 2 });
+  expect(segments).toEqual([]);
+  expect(stats).toEqual({ edgePixels: 0, rawSegments: 0 });
+});
+
+test("segmentsToScene maps through the transform, rounds and drops degenerate segments", () => {
+  const segs = segmentsToScene(
+    [
+      [0, 0, 1, 0],
+      [5, 5, 5.1, 5.1],
     ],
     (x, y) => ({ x: x * 2.4, y: y * 2.4 + 10 }),
   );
-  expect(segs).toEqual([
-    [0, 10, 2, 10],
-    [2, 10, 2, 12],
-  ]);
+  expect(segs).toEqual([[0, 10, 2, 10]]);
 });
 
 test("nearSegment measures point-to-segment distance", () => {
@@ -155,54 +162,39 @@ test("withoutOutline drops segments whose midpoint sits on an outline wall", () 
   expect(withoutOutline(segs, outline)).toEqual([[10, 50, 60, 50]]);
 });
 
-test("traceWallSegments maps traced lines into scene space, scales the minimum length and skips outline walls", () => {
-  const img = { ...image(["..........", ".########.", "..........", ".####.....", ".........."]), imageWidth: 20, imageHeight: 10 };
+test("traceWallSegments maps traced walls into scene space, scales the minimum length and skips outline walls", () => {
+  const img = { ...synthetic(200, 200, bandAndSeam), imageWidth: 400, imageHeight: 400 };
   const level = { textures: { fit: "fill" } };
-  const sceneRect = { x: 0, y: 0, width: 200, height: 100 };
-  const { segments: all, stats } = traceWallSegments({ image: img, level, sceneRect, gridSize: 40, outline: [] }, { threshold: 0.28, minSquares: 1, epsilon: 0.5 });
-  expect(stats.maskPixels).toBe(12);
-  expect(all).toEqual([
-    [20, 20, 160, 20],
-    [20, 60, 80, 60],
-  ]);
-  const long = traceWallSegments({ image: img, level, sceneRect, gridSize: 40, outline: [] }, { threshold: 0.28, minSquares: 2, epsilon: 0.5 });
-  expect(long.segments).toEqual([[20, 20, 160, 20]]);
-  const masked = traceWallSegments({ image: img, level, sceneRect, gridSize: 40, outline: [[0, 24, 200, 24]] }, { threshold: 0.28, minSquares: 1, epsilon: 0.5 });
-  expect(masked.segments).toEqual([[20, 60, 80, 60]]);
-});
-
-test("openMask removes features thinner than the structuring element and keeps thick bands", () => {
-  const { mask, width, height } = maskOf(["..........", ".########.", "..........", ".########.", ".########.", ".########.", ".........."]);
-  const opened = rows(openMask(mask, width, height, 1), width, height);
-  expect(opened).toEqual(["..........", "..........", "..........", ".########.", ".########.", ".########.", ".........."]);
-  expect(rows(openMask(mask, width, height, 0), width, height)).toEqual(rows(mask, width, height));
-  expect(rows(openMask(mask, width, height, 2), width, height).every((r) => !r.includes("#"))).toBe(true);
-});
-
-test("traceInteriorWalls with a thickness drops tile seams and traces the thick wall", () => {
-  const img = image(["............", ".##########.", "............", ".##########.", ".##########.", ".##########.", "............", "..#..#..#...", "............"]);
-  const { polylines, stats } = traceInteriorWalls(img, { threshold: 0.28, minLength: 3, epsilon: 0.5, thicknessPx: 2 });
-  expect(stats.afterOpen).toBe(30);
-  expect(polylines).toHaveLength(1);
-  expect(polylines[0].every(([, y]) => y === 4)).toBe(true);
-  expect(traceInteriorWalls(img, { threshold: 0.28, minLength: 3, epsilon: 0.5, thicknessPx: 6 }).stats.afterOpen).toBe(0);
-});
-
-test("traceWallSegments converts the thickness from grid squares to downscaled pixels", () => {
-  const img = { ...image(["..........", ".########.", "..........", ".########.", ".########.", ".########.", ".........."]), imageWidth: 20, imageHeight: 14 };
-  const level = { textures: { fit: "fill" } };
-  const sceneRect = { x: 0, y: 0, width: 200, height: 140 };
-  const thick = traceWallSegments({ image: img, level, sceneRect, gridSize: 40, outline: [] }, { threshold: 0.28, minSquares: 1, thickness: 1, epsilon: 0.5 });
-  expect(thick.stats.afterOpen).toBe(24);
-  expect(thick.segments).toHaveLength(1);
-  const [x1, y1, x2, y2] = thick.segments[0];
-  expect([y1, y2]).toEqual([80, 80]);
-  expect(x1).toBeGreaterThanOrEqual(20);
-  expect(x2).toBeLessThanOrEqual(160);
-  expect(x2 - x1).toBeGreaterThanOrEqual(60);
+  const sceneRect = { x: 0, y: 0, width: 400, height: 400 };
+  const { segments } = traceWallSegments({ image: img, level, sceneRect, gridSize: 100, outline: [] }, { edgeStrength: 0.35, minSquares: 1 });
+  expect(segments).toHaveLength(1);
+  expect(segments[0][1]).toBeGreaterThanOrEqual(202);
+  expect(segments[0][1]).toBeLessThanOrEqual(208);
+  expect(Math.abs(segments[0][2] - segments[0][0])).toBeGreaterThanOrEqual(300);
+  const long = traceWallSegments({ image: img, level, sceneRect, gridSize: 100, outline: [] }, { edgeStrength: 0.35, minSquares: 5 });
+  expect(long.segments).toEqual([]);
+  const masked = traceWallSegments({ image: img, level, sceneRect, gridSize: 100, outline: [[0, 205, 400, 205]] }, { edgeStrength: 0.35, minSquares: 1 });
+  expect(masked.segments).toEqual([]);
 });
 
 test("previewSvgLines maps segments to line attributes", () => {
   expect(previewSvgLines([[1, 2, 3, 4]])).toEqual([{ x1: 1, y1: 2, x2: 3, y2: 4 }]);
   expect(previewSvgLines([])).toEqual([]);
+});
+
+test("segmentsBounds returns the bounding box or null", () => {
+  expect(segmentsBounds([])).toBeNull();
+  expect(
+    segmentsBounds([
+      [10, 20, 30, 5],
+      [0, 8, 12, 40],
+    ]),
+  ).toEqual({ x: 0, y: 5, width: 30, height: 35 });
+});
+
+test("viewFit centers on the rect and clamps the scale", () => {
+  const screen = { width: 1000, height: 500 };
+  expect(viewFit({ x: 0, y: 0, width: 200, height: 100 }, screen)).toEqual({ x: 100, y: 50, scale: 3 });
+  expect(viewFit({ x: 100, y: 100, width: 100000, height: 100 }, screen)).toEqual({ x: 50100, y: 150, scale: 0.15 });
+  expect(viewFit({ x: 0, y: 0, width: 2000, height: 500 }, screen).scale).toBeCloseTo(0.425, 5);
 });

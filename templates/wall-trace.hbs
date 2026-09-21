@@ -1,15 +1,12 @@
 <div class="floorer-wall-trace-body">
   <p class="hint">{{localize "FLOORER.WallTrace.Hint"}}</p>
   <div class="fields">
-    <label for="{{id}}-threshold" data-tooltip="{{localize 'FLOORER.WallTrace.Tip.Threshold'}}">{{localize "FLOORER.WallTrace.Threshold"}}</label>
-    <input type="range" id="{{id}}-threshold" name="threshold" min="0.05" max="0.6" step="0.01" value="{{threshold}}">
-    <output name="threshold" for="{{id}}-threshold">{{threshold}}</output>
+    <label for="{{id}}-edgeStrength" data-tooltip="{{localize 'FLOORER.WallTrace.Tip.EdgeStrength'}}">{{localize "FLOORER.WallTrace.EdgeStrength"}}</label>
+    <input type="range" id="{{id}}-edgeStrength" name="edgeStrength" min="0.1" max="0.8" step="0.01" value="{{edgeStrength}}">
+    <output name="edgeStrength" for="{{id}}-edgeStrength">{{edgeStrength}}</output>
     <label for="{{id}}-minSquares" data-tooltip="{{localize 'FLOORER.WallTrace.Tip.MinLength'}}">{{localize "FLOORER.WallTrace.MinLength"}}</label>
-    <input type="range" id="{{id}}-minSquares" name="minSquares" min="0.1" max="3" step="0.1" value="{{minSquares}}">
+    <input type="range" id="{{id}}-minSquares" name="minSquares" min="0.5" max="6" step="0.5" value="{{minSquares}}">
     <output name="minSquares" for="{{id}}-minSquares">{{minSquares}}</output>
-    <label for="{{id}}-thickness" data-tooltip="{{localize 'FLOORER.WallTrace.Tip.Thickness'}}">{{localize "FLOORER.WallTrace.Thickness"}}</label>
-    <input type="range" id="{{id}}-thickness" name="thickness" min="0.05" max="0.6" step="0.05" value="{{thickness}}">
-    <output name="thickness" for="{{id}}-thickness">{{thickness}}</output>
   </div>
   <div class="status">
     <span class="chip info count">{{#if loading}}{{localize "FLOORER.WallTrace.Loading"}}{{else}}{{localize "FLOORER.WallTrace.Count" count=count}}{{/if}}</span>

@@ -5,7 +5,7 @@ const ID = "floorer-wall-preview";
 const COLOR = "#ff6400";
 const STROKE = 4;
 const DOT = 3;
-const Z_INDEX = 20;
+const Z_INDEX = 25;
 
 function svgElement(tag, attrs) {
   const node = document.createElementNS(SVG_NS, tag);
@@ -49,6 +49,7 @@ export class WallPreview {
 
   sync() {
     if (!this.#svg || !canvas.ready) return;
+    if (!this.#svg.isConnected) document.body.appendChild(this.#svg);
     this.#outer.setAttribute("transform", viewTransform());
     this.#inner.setAttribute("transform", stageTransform());
   }

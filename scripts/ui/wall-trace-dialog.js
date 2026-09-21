@@ -1,14 +1,17 @@
 import { MODULE_ID } from "../constants.js";
 import { loadImageData } from "../canvas/image-alpha.js";
-import { traceWallSegments } from "../model/wall-trace.js";
+import { imagePlacement } from "../model/trace.js";
+import { segmentsBounds, traceWallSegments, viewFit } from "../model/wall-trace.js";
 import { createInteriorWalls, outlineWallSegments } from "./panel-actions.js";
 import { WallPreview } from "./wall-preview.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-const IMAGE_MAX = 2000;
+const IMAGE_MAX = 1600;
 const DEBOUNCE_MS = 150;
-const DEFAULTS = Object.freeze({ threshold: 0.45, minSquares: 0.5, thickness: 0.15 });
+const PAN_MS = 400;
+const DEFAULTS = Object.freeze({ edgeStrength: 0.35, minSquares: 1.5 });
+const DECIMALS = Object.freeze({ edgeStrength: 2, minSquares: 1 });
 
 export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   #scene;
@@ -20,6 +23,7 @@ export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   #preview = new WallPreview();
   #timer = null;
   #hooks = [];
+  #panned = false;
 
   static DEFAULT_OPTIONS = {
     id: `${MODULE_ID}-wall-trace`,
@@ -64,15 +68,11 @@ export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   #readParams() {
-    const form = this.element;
-    this.#params = {
-      threshold: Number(form.querySelector("input[name=threshold]").value),
-      minSquares: Number(form.querySelector("input[name=minSquares]").value),
-      thickness: Number(form.querySelector("input[name=thickness]").value),
-    };
-    form.querySelector("output[name=threshold]").textContent = this.#params.threshold.toFixed(2);
-    form.querySelector("output[name=minSquares]").textContent = this.#params.minSquares.toFixed(1);
-    form.querySelector("output[name=thickness]").textContent = this.#params.thickness.toFixed(2);
+    for (const [name, digits] of Object.entries(DECIMALS)) {
+      const value = Number(this.element.querySelector(`input[name=${name}]`).value);
+      this.#params[name] = value;
+      this.element.querySelector(`output[name=${name}]`).textContent = value.toFixed(digits);
+    }
   }
 
   #onSlide() {
@@ -97,6 +97,20 @@ export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#stats = stats;
     this.#preview.draw(segments);
     this.#showCount();
+    this.#panToPreview();
+  }
+
+  #placementRect() {
+    const { imageWidth, imageHeight } = this.#image;
+    const { x, y, scaleX, scaleY } = imagePlacement(this.#entry.level, this.#scene.dimensions.sceneRect, imageWidth, imageHeight);
+    return { x, y, width: scaleX * imageWidth, height: scaleY * imageHeight };
+  }
+
+  #panToPreview() {
+    if (this.#panned) return;
+    this.#panned = true;
+    const rect = segmentsBounds(this.#segments) ?? this.#placementRect();
+    canvas.animatePan({ ...viewFit(rect, canvas.app.renderer.screen), duration: PAN_MS });
   }
 
   #countPill() {
@@ -111,7 +125,7 @@ export class WallTraceDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   #countText() {
-    if (this.#stats && this.#stats.afterOpen === 0) return game.i18n.localize("FLOORER.WallTrace.NoThick");
+    if (this.#stats && this.#stats.edgePixels === 0) return game.i18n.localize("FLOORER.WallTrace.NoEdges");
     return game.i18n.format("FLOORER.WallTrace.Count", { count: this.#segments.length });
   }
 
