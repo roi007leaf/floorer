@@ -106,6 +106,20 @@ test("panelContext stair count includes owned and arriving stairs", () => {
   expect(byId.b).toMatchObject({ stairCount: 1, stairLinks: "1\u00d7 Ground" });
 });
 
+test("panelContext counts a shaft on its stop levels and labels the stops", () => {
+  const plan = buildFloorPlan({ levels: [{ ...L("f1", 0, 10, ["f1"]), name: "Ground" }, { ...L("f2", 10, 20, ["f2"]), name: "L2" }, { ...L("f3", 20, 30, ["f3"]), name: "Watchtower" }], regions: [
+    { id: "s1", color: "#e6194b", shapes: [{ ...shape(5), hole: false }], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f3", stops: ["f2"], index: 0, managed: true } } },
+  ] });
+  const opts = { activeLevelId: null, issues: [], intent: null, journalSize: 0 };
+  const ctx = panelContext(plan, { ...opts, expanded: { levelId: "f1", kind: "stairs" } });
+  const byId = Object.fromEntries(ctx.rows.map((r) => [r.id, r]));
+  expect(byId.f2).toMatchObject({ stairCount: 1, stairLinks: "1\u00d7 Ground" });
+  expect(byId.f3).toMatchObject({ stairCount: 1, stairLinks: "1\u00d7 Ground" });
+  expect(byId.f1.details.items[0]).toMatchObject({ otherLevelId: "f3", via: 'FLOORER.Panel.StairVia:{"levels":"L2"}' });
+  const stop = panelContext(plan, { ...opts, expanded: { levelId: "f2", kind: "stairs" } }).rows.find((r) => r.id === "f2");
+  expect(stop.details.items[0]).toMatchObject({ id: "s1", via: 'FLOORER.Panel.StairVia:{"levels":"L2"}' });
+});
+
 test("panelContext dedupes stairs to the same level and shows count", () => {
   const plan = buildFloorPlan({ levels: [{ ...L("f1", 0, 10, ["f1"]), name: "Ground" }, { ...L("f2", 10, 20, ["f2"]), name: "L2" }], regions: [
     { id: "s1", flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", managed: true } } },
@@ -139,8 +153,8 @@ test("panelContext expands stair details with the other level and shape", () => 
   expect(f1.details).toEqual({
     kind: "stairs",
     items: [
-      { id: "s1", levelId: "f1", otherLevelId: "f2", color: "#e6194b", code: "S1", targets: [{ id: "f2", name: "L2", selected: true }], jumpTooltip: 'FLOORER.Panel.JumpStair:{"level":"L2"}', shape: "10×20 @ 5,0" },
-      { id: "s2", levelId: "f2", otherLevelId: "f2", color: null, code: "S?", targets: [{ id: "f2", name: "L2", selected: true }], jumpTooltip: 'FLOORER.Panel.JumpStair:{"level":"L2"}', shape: "polygon · 3 pts" },
+      { id: "s1", levelId: "f1", otherLevelId: "f2", color: "#e6194b", code: "S1", targets: [{ id: "f2", name: "L2", selected: true }], via: null, jumpTooltip: 'FLOORER.Panel.JumpStair:{"level":"L2"}', shape: "10×20 @ 5,0" },
+      { id: "s2", levelId: "f2", otherLevelId: "f2", color: null, code: "S?", targets: [{ id: "f2", name: "L2", selected: true }], via: null, jumpTooltip: 'FLOORER.Panel.JumpStair:{"level":"L2"}', shape: "polygon · 3 pts" },
     ],
   });
   expect(ctx.rows.find((r) => r.id === "f2").details).toBeNull();

@@ -111,7 +111,8 @@ class Intents {
     const target = findLevel(plan, intent.targetLevelId);
     if (!target) return this.#abort("FLOORER.Intent.TargetMissing");
     const index = canvas.scene.regions.filter((r) => r.flags.floorer?.role === ROLES.STAIR).length;
-    document.updateSource(stairCreateData(entry.level, target.level, data.shapes ?? [], movementActionKeys(), index));
+    const allLevels = plan.levels.map((e) => e.level);
+    document.updateSource(stairCreateData(entry.level, target.level, data.shapes ?? [], movementActionKeys(), index, allLevels));
     return true;
   }
 

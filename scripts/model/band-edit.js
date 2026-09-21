@@ -1,12 +1,32 @@
-import { bandOf, findLevel, finiteOrNull, isManaged } from "./floor-plan.js";
+import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, shaftBand } from "./floor-plan.js";
 
 function regionBand(region) {
   return { ...bandOf(region), topInclusive: region?.elevation?.topInclusive === true };
 }
 
-function ownedRegions(entry) {
-  const surface = entry.surface && isManaged(entry.surface) ? [entry.surface] : [];
-  return [...surface, ...entry.stairs.filter(isManaged)];
+function levelAfter(plan, id, levelId, band) {
+  const level = findLevel(plan, id)?.level;
+  if (!level) return null;
+  return { id: level.id, elevation: level.id === levelId ? band : bandOf(level) };
+}
+
+function stairBandAfter(plan, stair, levelId, band) {
+  const flag = stair.flags.floorer;
+  const from = levelAfter(plan, flag.levelId, levelId, band);
+  const target = levelAfter(plan, flag.targetLevelId, levelId, band);
+  if (!from || !target) return null;
+  const { lower, upper } = orderPair(from, target);
+  return { ...shaftBand(lower, upper), topInclusive: true };
+}
+
+function taggedStairs(entry) {
+  return [...new Set([...entry.stairs, ...entry.arrivingStairs])].filter(isManaged);
+}
+
+function regionUpdates(plan, entry, levelId, band) {
+  const surface = entry.surface && isManaged(entry.surface) ? [{ region: entry.surface, elevation: { ...band, topInclusive: true } }] : [];
+  const stairs = taggedStairs(entry).map((region) => ({ region, elevation: stairBandAfter(plan, region, levelId, band) }));
+  return [...surface, ...stairs.filter((s) => s.elevation)];
 }
 
 function tokensOn(plan, levelId) {
@@ -28,15 +48,15 @@ export function bandChangeUpdates(plan, levelId, { bottom, top }) {
   if (!entry) return foundry.utils.deepClone(EMPTY);
   const level = entry.level;
   const old = bandOf(level);
-  const regions = ownedRegions(entry);
+  const regions = regionUpdates(plan, entry, levelId, { bottom, top });
   const tokens = tokenUpdates(plan, levelId, old.bottom, bottom);
   return {
     levels: [{ _id: level.id, elevation: { bottom, top } }],
-    regions: regions.map((r) => ({ _id: r.id, elevation: { bottom, top, topInclusive: true } })),
+    regions: regions.map(({ region, elevation }) => ({ _id: region.id, elevation })),
     tokens: tokens.tokens,
     before: {
       levels: [{ _id: level.id, elevation: old }],
-      regions: regions.map((r) => ({ _id: r.id, elevation: regionBand(r) })),
+      regions: regions.map(({ region }) => ({ _id: region.id, elevation: regionBand(region) })),
       tokens: tokens.before,
     },
   };

@@ -19,13 +19,41 @@ function plan() {
   });
 }
 
-test("bandChangeUpdates moves the level, its surface and owned managed stairs", () => {
+test("bandChangeUpdates moves the level, its surface and re-derives the shafts of its stairs", () => {
   const out = bandChangeUpdates(plan(), "f1", { bottom: -5, top: 12 });
   expect(out.levels).toEqual([{ _id: "f1", elevation: { bottom: -5, top: 12 } }]);
   expect(out.regions).toEqual([
     { _id: "s1", elevation: { bottom: -5, top: 12, topInclusive: true } },
-    { _id: "st", elevation: { bottom: -5, top: 12, topInclusive: true } },
+    { _id: "st", elevation: { bottom: -5, top: 20, topInclusive: true } },
   ]);
+  expect(out.before.regions).toEqual([
+    { _id: "s1", elevation: { bottom: 0, top: 10, topInclusive: true } },
+    { _id: "st", elevation: { bottom: 0, top: 10, topInclusive: true } },
+  ]);
+});
+
+test("bandChangeUpdates re-derives arriving stairs from the upper end's new top", () => {
+  const out = bandChangeUpdates(plan(), "f2", { bottom: 10, top: 25 });
+  expect(out.regions).toEqual([
+    { _id: "s2", elevation: { bottom: 10, top: 25, topInclusive: true } },
+    { _id: "st2", elevation: { bottom: 10, top: null, topInclusive: true } },
+    { _id: "st", elevation: { bottom: 0, top: 25, topInclusive: true } },
+  ]);
+});
+
+test("bandChangeUpdates on a stop level keeps the stair spanning lower bottom to upper top", () => {
+  const p = buildFloorPlan({
+    levels: [L("f1", 0, 10), L("f2", 10, 20), L("f3", 20, 30)],
+    regions: [R("st", "stair", "f1", { targetLevelId: "f3", stops: ["f2"] })],
+    tokens: [],
+  });
+  const out = bandChangeUpdates(p, "f2", { bottom: 10, top: 18 });
+  expect(out.regions).toEqual([{ _id: "st", elevation: { bottom: 0, top: 30, topInclusive: true } }]);
+});
+
+test("bandChangeUpdates skips a stair whose other end is missing", () => {
+  const p = buildFloorPlan({ levels: [L("f1", 0, 10)], regions: [R("st", "stair", "f1", { targetLevelId: "gone" })], tokens: [] });
+  expect(bandChangeUpdates(p, "f1", { bottom: 0, top: 12 }).regions).toEqual([]);
 });
 
 test("bandChangeUpdates moves only tokens resting on the old bottom", () => {
@@ -43,8 +71,8 @@ test("bandChangeUpdates blank bottom rests tokens at 0", () => {
 test("bandChangeUpdates captures before data with normalised infinities", () => {
   const out = bandChangeUpdates(plan(), "r", { bottom: 25, top: null });
   expect(out.before.levels).toEqual([{ _id: "r", elevation: { bottom: 20, top: null } }]);
-  expect(out.before.regions).toEqual([]);
-  expect(out.regions).toEqual([]);
+  expect(out.before.regions).toEqual([{ _id: "st2", elevation: { bottom: 0, top: 10, topInclusive: true } }]);
+  expect(out.regions).toEqual([{ _id: "st2", elevation: { bottom: 10, top: null, topInclusive: true } }]);
 });
 
 test("bandChangeUpdates skips unmanaged surface and unknown level", () => {

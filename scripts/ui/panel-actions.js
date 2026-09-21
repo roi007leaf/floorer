@@ -3,7 +3,7 @@ import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
 import { stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
 import { footprintShapesForLevel } from "./footprint.js";
-import { bandOf, buildFloorPlan, findLevel } from "../model/floor-plan.js";
+import { bandOf, buildFloorPlan, findLevel, stairStops } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
 import { holeRemovalUpdates, stairRemovalUpdates, tracedHoleMirror } from "../model/holes.js";
@@ -84,6 +84,11 @@ function stairTargets(entry, plan, otherId) {
     .reverse();
 }
 
+function stairVia(stair, plan) {
+  const names = stairStops(stair).map((id) => findLevel(plan, id)?.level.name ?? id);
+  return names.length ? game.i18n.format("FLOORER.Panel.StairVia", { levels: names.join(", ") }) : null;
+}
+
 function stairItem(stair, entry, plan) {
   const otherId = otherLevelId(stair, entry);
   const other = findLevel(plan, otherId)?.level;
@@ -94,6 +99,7 @@ function stairItem(stair, entry, plan) {
     color: stair.color ?? null,
     code: stairCode(stair),
     targets: stairTargets(entry, plan, otherId),
+    via: stairVia(stair, plan),
     jumpTooltip: game.i18n.format("FLOORER.Panel.JumpStair", { level: other?.name ?? "?" }),
     shape: shapeSummary(firstShape(stair)),
   };

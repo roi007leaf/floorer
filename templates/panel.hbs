@@ -56,6 +56,7 @@
         <select class="target" data-action="retargetStair" data-region-id="{{id}}" data-level-id="{{../id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.StairTargetEdit'}}">
           {{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
         </select>
+        {{#if via}}<span class="label via" data-tooltip="{{via}}">{{via}}</span>{{/if}}
         <button type="button" class="icon" data-action="jumpStair" data-region-id="{{id}}" data-level-id="{{otherLevelId}}" data-tooltip="{{jumpTooltip}}"><i class="fas fa-arrow-right-to-bracket"></i></button>
         <span class="shape">{{shape}}</span>
         <button type="button" class="icon" data-action="locateRegion" data-region-id="{{id}}" data-level-id="{{../id}}" data-tooltip="{{localize 'FLOORER.Panel.Locate'}}"><i class="fas fa-crosshairs"></i></button>

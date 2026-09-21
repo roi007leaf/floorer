@@ -44,20 +44,51 @@ test("live roof level with Infinity top yields null top in create data", () => {
 test("stair from a live basement with -Infinity bottom yields null bottom", () => {
   const b = L("b", -Infinity, 0, ["b"]);
   const f1 = L("f1", 0, 10, ["f1"]);
-  expect(stairCreateData(b, f1, shapes, ["walk"]).elevation).toEqual({ bottom: null, top: 0, topInclusive: true });
+  expect(stairCreateData(b, f1, shapes, ["walk"]).elevation).toEqual({ bottom: null, top: 10, topInclusive: true });
 });
 
-test("stairCreateData sits in lower band regardless of argument order", () => {
+test("stairCreateData spans lower bottom to upper top regardless of argument order", () => {
   const f1 = L("f1", 0, 10, ["f1"]);
   const f2 = L("f2", 10, 20, ["f2"]);
   const data = stairCreateData(f2, f1, shapes, ["walk", "displace"]);
-  expect(data.elevation).toEqual({ bottom: 0, top: 10, topInclusive: true });
+  expect(data.elevation).toEqual({ bottom: 0, top: 20, topInclusive: true });
   expect(data.topInclusive).toBeUndefined();
   expect(data.levels).toEqual(["f1", "f2"]);
   expect(data.behaviors[0]).toEqual({ type: "changeLevel", system: { movementActions: ["walk"] } });
-  expect(data.flags.floorer).toEqual({ role: "stair", levelId: "f1", targetLevelId: "f2", index: 0, managed: true, v: 1 });
+  expect(data.flags.floorer).toEqual({ role: "stair", levelId: "f1", targetLevelId: "f2", stops: [], index: 0, managed: true, v: 1 });
   expect(data.name).toBe("Stair f1 ↔ f2");
   expect(data.color).toBe(STAIR_PALETTE[0]);
+});
+
+test("stairCreateData tags every level inside the climb as a stop, sorted by bottom", () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const f2 = L("f2", 10, 20, ["f2"]);
+  const f3 = L("f3", 20, 30, ["f3"]);
+  const roof = L("r", 30, null, ["r"]);
+  const data = stairCreateData(f3, f1, shapes, ["walk"], 0, [roof, f3, f2, f1]);
+  expect(data.elevation).toEqual({ bottom: 0, top: 30, topInclusive: true });
+  expect(data.levels).toEqual(["f1", "f2", "f3"]);
+  expect(data.flags.floorer).toMatchObject({ levelId: "f1", targetLevelId: "f3", stops: ["f2"] });
+  expect(data.name).toBe("Stair f1 ↔ f3");
+});
+
+test("stairCreateData to an open-topped roof includes every level above the lower end", () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const f2 = L("f2", 10, 20, ["f2"]);
+  const roof = L("r", 20, null, ["r"]);
+  const data = stairCreateData(f1, roof, shapes, ["walk"], 0, [f1, f2, roof]);
+  expect(data.elevation).toEqual({ bottom: 0, top: null, topInclusive: true });
+  expect(data.levels).toEqual(["f1", "f2", "r"]);
+  expect(data.flags.floorer.stops).toEqual(["f2"]);
+});
+
+test("stairCreateData leaves out levels that only partly overlap the climb", () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const f2 = L("f2", 10, 20, ["f2"]);
+  const half = L("h", 15, 25, ["h"]);
+  const data = stairCreateData(f1, f2, shapes, ["walk"], 0, [f1, f2, half]);
+  expect(data.levels).toEqual(["f1", "f2"]);
+  expect(data.flags.floorer.stops).toEqual([]);
 });
 
 test("stairCreateData colors and indexes by creation order", () => {

@@ -132,7 +132,7 @@ test("hole adoption without surface warns and cancels", () => {
   expect(ui.notifications.warn).toHaveBeenCalled();
 });
 
-test("stair adoption uses lower band and mirrors on create", async () => {
+test("stair adoption spans the climb and mirrors on create", async () => {
   const f1 = L("f1", 0, 10, ["f1", "f2"]);
   const f2 = L("f2", 10, 20, ["f1", "f2"]);
   const s = scene([f1, f2], [S("s1", "f1"), { ...S("s2", "f2"), elevation: { bottom: 10, top: 20 } }]);
@@ -140,8 +140,9 @@ test("stair adoption uses lower band and mirrors on create", async () => {
   const doc = { updateSource: jest.fn() };
   intents.onPreCreateRegion(doc, { shapes: [rect] }, {}, "gm1");
   const src = doc.updateSource.mock.calls[0][0];
-  expect(src.elevation).toEqual({ bottom: 0, top: 10, topInclusive: true });
+  expect(src.elevation).toEqual({ bottom: 0, top: 20, topInclusive: true });
   expect(src.levels).toEqual(["f1", "f2"]);
+  expect(src.flags.floorer.stops).toEqual([]);
   expect(src.behaviors[0].type).toBe("changeLevel");
   expect(src.flags.floorer.index).toBe(0);
   expect(src.color).toBe(STAIR_PALETTE[0]);
@@ -206,7 +207,7 @@ test("stair mirror skipped when setting off", async () => {
   expect(s.updateEmbeddedDocuments).not.toHaveBeenCalled();
 });
 
-test("non-adjacent stair cuts openings into its own two ends, skipping the level between", async () => {
+test("a stair drawn across three levels becomes a shaft with a stop and openings in every floor", async () => {
   const f1 = L("f1", 0, 10, ["f1", "f2", "f3"]);
   const f2 = L("f2", 10, 20, ["f1", "f2", "f3"]);
   const f3 = L("f3", 20, 30, ["f1", "f2", "f3"]);
@@ -214,10 +215,20 @@ test("non-adjacent stair cuts openings into its own two ends, skipping the level
   const s2 = { ...S("s2", "f2"), elevation: { bottom: 10, top: 20, topInclusive: true } };
   const s3 = { ...S("s3", "f3"), elevation: { bottom: 20, top: 30, topInclusive: true } };
   const s = scene([f1, f2, f3], [s1, s2, s3]);
-  const created = { id: "st", shapes: [rect], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f3", managed: true } } };
+  intents.arm({ kind: "stair", levelId: "f1", targetLevelId: "f3", tool: "rectangle" });
+  const doc = { updateSource: jest.fn() };
+  intents.onPreCreateRegion(doc, { shapes: [rect] }, {}, "gm1");
+  const src = doc.updateSource.mock.calls[0][0];
+  expect(src.elevation).toEqual({ bottom: 0, top: 30, topInclusive: true });
+  expect(src.levels).toEqual(["f1", "f2", "f3"]);
+  expect(src.flags.floorer.stops).toEqual(["f2"]);
+  const created = { id: "st", shapes: [rect], flags: { floorer: src.flags.floorer } };
   await intents.onCreateRegion(created, {}, "gm1");
   const updates = s.updateEmbeddedDocuments.mock.calls[0][1];
-  expect(updates.map((u) => u._id).sort()).toEqual(["s1", "s3"]);
+  expect(updates.map((u) => u._id)).toEqual(["s3", "s2", "s1"]);
+  const origin = updates[0]["flags.floorer.holes"][0];
+  expect(origin.mirrorOf).toBeUndefined();
+  expect(updates.slice(1).every((u) => u["flags.floorer.holes"][0].mirrorOf === origin.id)).toBe(true);
 });
 
 test("stair drawn as a polygon mirrors the polygon opening into both surfaces", async () => {

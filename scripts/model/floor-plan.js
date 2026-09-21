@@ -41,6 +41,32 @@ export function orderPair(a, b) {
   return bottomOf(a) <= bottomOf(b) ? { lower: a, upper: b } : { lower: b, upper: a };
 }
 
+export function shaftBand(lower, upper) {
+  return { bottom: bandOf(lower).bottom, top: bandOf(upper).top };
+}
+
+function within(level, { bottom, top }) {
+  const band = bandOf(level);
+  return (band.bottom ?? -Infinity) >= (bottom ?? -Infinity) && (band.top ?? Infinity) <= (top ?? Infinity);
+}
+
+export function shaftLevels(lower, upper, allLevels = []) {
+  const band = shaftBand(lower, upper);
+  const ends = new Set([lower.id, upper.id]);
+  const between = allLevels.filter((l) => !ends.has(l.id) && within(l, band));
+  return [lower, ...between, upper].sort((a, b) => bottomOf(a) - bottomOf(b));
+}
+
+export function shaftOf(lower, upper, allLevels = []) {
+  const levels = shaftLevels(lower, upper, allLevels);
+  const ends = new Set([lower.id, upper.id]);
+  return { band: shaftBand(lower, upper), levels: levels.map((l) => l.id), stops: levels.filter((l) => !ends.has(l.id)).map((l) => l.id) };
+}
+
+export function stairStops(stair) {
+  return Array.from(floorerFlag(stair)?.stops ?? []);
+}
+
 function emptyFloorLevel(level) {
   return { level, surface: null, stairs: [], arrivingStairs: [], managed: isManaged(level), below: null, above: null };
 }
@@ -54,7 +80,7 @@ function attachRegions(byLevel, regions) {
       if (entry) entry.surface = region;
     } else if (flag.role === ROLES.STAIR) {
       if (entry) entry.stairs.push(region);
-      byLevel.get(flag.targetLevelId)?.arrivingStairs.push(region);
+      for (const id of [flag.targetLevelId, ...stairStops(region)]) byLevel.get(id)?.arrivingStairs.push(region);
     }
   }
 }

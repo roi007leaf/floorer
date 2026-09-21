@@ -1,4 +1,4 @@
-import { stairOpeningUpdates, stairRetargetUpdates } from "../../scripts/model/stair-retarget.js";
+import { stairOpeningUpdates, stairRetargetUpdates, stairSurfaces } from "../../scripts/model/stair-retarget.js";
 import { buildFloorPlan } from "../../scripts/model/floor-plan.js";
 
 const rect = { type: "rectangle", x: 1, y: 2, width: 3, height: 4, rotation: 0, hole: false };
@@ -21,28 +21,29 @@ test("returns null for an unknown stair, unknown target or a no-op target", () =
   expect(stairRetargetUpdates(plan, "st", "f1", "f2")).toBeNull();
 });
 
-test("keeps the viewed level fixed and re-derives band, levels and flags from the new pair", () => {
+test("keeps the viewed level fixed and re-derives band, levels, stops and flags from the new pair", () => {
   const plan = planWith([S("f1"), S("f2"), S("f3"), stair("f1", "f2")]);
   const out = stairRetargetUpdates(plan, "st", "f1", "f3");
   expect(out.stair).toEqual({
     _id: "st",
     name: "Stair f1 ↔ f3",
-    elevation: { bottom: 0, top: 10, topInclusive: true },
-    levels: ["f1", "f3"],
+    elevation: { bottom: 0, top: 30, topInclusive: true },
+    levels: ["f1", "f2", "f3"],
     "flags.floorer.levelId": "f1",
     "flags.floorer.targetLevelId": "f3",
+    "flags.floorer.stops": ["f2"],
   });
 });
 
 test("viewing from the upper end and picking a lower target reorders the pair", () => {
   const plan = planWith([stair("f1", "f2")]);
   const out = stairRetargetUpdates(plan, "st", "f2", "f3");
-  expect(out.stair).toMatchObject({ elevation: { bottom: 10, top: 20, topInclusive: true }, levels: ["f2", "f3"], "flags.floorer.levelId": "f2", "flags.floorer.targetLevelId": "f3" });
+  expect(out.stair).toMatchObject({ elevation: { bottom: 10, top: 30, topInclusive: true }, levels: ["f2", "f3"], "flags.floorer.levelId": "f2", "flags.floorer.targetLevelId": "f3", "flags.floorer.stops": [] });
   const down = stairRetargetUpdates(planWith([stair("f2", "f3")]), "st", "f3", "f1");
-  expect(down.stair).toMatchObject({ elevation: { bottom: 0, top: 10, topInclusive: true }, levels: ["f1", "f3"], "flags.floorer.levelId": "f1", "flags.floorer.targetLevelId": "f3" });
+  expect(down.stair).toMatchObject({ elevation: { bottom: 0, top: 30, topInclusive: true }, levels: ["f1", "f2", "f3"], "flags.floorer.levelId": "f1", "flags.floorer.targetLevelId": "f3", "flags.floorer.stops": ["f2"] });
 });
 
-test("removes the old openings everywhere and cuts new ones into the new pair, upper mirrored into lower", () => {
+test("removes the old openings everywhere and cuts new ones into every level of the shaft, mirrored from the top", () => {
   const f2 = S("f2", [{ id: "u", stairId: "st" }], [opening]);
   const f1 = S("f1", [{ id: "l", stairId: "st", mirrorOf: "u" }], [opening]);
   const f3 = S("f3");
@@ -50,12 +51,12 @@ test("removes the old openings everywhere and cuts new ones into the new pair, u
   const out = stairRetargetUpdates(plan, "st", "f1", "f3");
   expect(out.surfaceRemovals.map((u) => u._id)).toEqual(["f1", "f2"]);
   expect(out.surfaceRemovals.every((u) => u["flags.floorer.holes"].length === 0)).toBe(true);
-  expect(out.surfaceAdditions.map((u) => u._id)).toEqual(["f3", "f1"]);
-  const [upper, lower] = out.surfaceAdditions;
+  expect(out.surfaceAdditions.map((u) => u._id)).toEqual(["f3", "f2", "f1"]);
+  const [upper, stop, lower] = out.surfaceAdditions;
   expect(upper["flags.floorer.holes"]).toEqual([{ id: upper.ids[0], stairId: "st" }]);
+  expect(stop["flags.floorer.holes"]).toEqual([{ id: stop.ids[0], mirrorOf: upper.ids[0], stairId: "st" }]);
   expect(lower["flags.floorer.holes"]).toEqual([{ id: lower.ids[0], mirrorOf: upper.ids[0], stairId: "st" }]);
-  expect(lower.shapes).toEqual([rect, paddedOpening]);
-  expect(upper.shapes).toEqual([rect, paddedOpening]);
+  for (const u of out.surfaceAdditions) expect(u.shapes).toEqual([rect, paddedOpening]);
 });
 
 test("additions build on the post-removal surface state and skip unmanaged or missing surfaces", () => {
@@ -68,6 +69,19 @@ test("additions build on the post-removal surface state and skip unmanaged or mi
   expect(out.surfaceAdditions[0].shapes).toEqual([rect, { ...opening, x: 9 }, paddedOpening]);
   const unmanaged = { ...S("f3"), flags: { floorer: { role: "surface", levelId: "f3", holes: [], managed: false } } };
   expect(stairRetargetUpdates(planWith([f1, f2, unmanaged, stair("f1", "f2")]), "st", "f2", "f3").surfaceAdditions.map((u) => u._id)).toEqual(["f2"]);
+});
+
+test("a missing stop surface is skipped and the remaining ends still mirror from the top", () => {
+  const plan = planWith([S("f1"), S("f3"), stair("f1", "f3")]);
+  const out = stairOpeningUpdates(plan, stair("f1", "f3"));
+  expect(out.map((u) => u._id)).toEqual(["f3", "f1"]);
+  expect(out[1]["flags.floorer.holes"][0].mirrorOf).toBe(out[0].ids[0]);
+});
+
+test("stairSurfaces lists the managed surfaces of every level in the shaft, top first", () => {
+  const plan = planWith([S("f1"), S("f2"), S("f3"), stair("f1", "f3")]);
+  expect(stairSurfaces(plan, stair("f1", "f3")).map((s) => s.id)).toEqual(["f3", "f2", "f1"]);
+  expect(stairSurfaces(plan, stair("f1", "gone"))).toEqual([]);
 });
 
 test("stairOpeningUpdates pads the cut shapes outward so tokens clear the ceiling", () => {
@@ -91,6 +105,6 @@ test("additions keep the surface id when the same surface is also in removals (d
   const plan = planWith([s1, s2, S("f3"), stair("f1", "f2")]);
   const out = stairRetargetUpdates(plan, "st", "f1", "f3");
   expect(out.surfaceRemovals.map((u) => u._id).sort()).toEqual(["f1", "f2"]);
-  expect(out.surfaceAdditions.map((u) => u._id).sort()).toEqual(["f1", "f3"]);
+  expect(out.surfaceAdditions.map((u) => u._id).sort()).toEqual(["f1", "f2", "f3"]);
   expect(out.surfaceAdditions.every((u) => typeof u._id === "string")).toBe(true);
 });

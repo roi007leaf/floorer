@@ -1,8 +1,7 @@
-import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, surfaceLevels } from "./floor-plan.js";
+import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, shaftOf, stairStops, surfaceLevels } from "./floor-plan.js";
 import { holeAppendData } from "./holes.js";
 import { bandChangeUpdates, bandGaps } from "./band-edit.js";
-import { stairOpeningUpdates } from "./stair-retarget.js";
-import { padShape, STAIR_OPENING_PAD } from "./shapes.js";
+import { stairOpeningShapes, stairOpeningUpdates, stairSurfaces } from "./stair-retarget.js";
 
 export function sameSet(a, b) {
   const sa = new Set(a);
@@ -10,13 +9,12 @@ export function sameSet(a, b) {
   return sa.size === sb.size && [...sa].every((x) => sb.has(x));
 }
 
-function sameBand(elevation, level) {
-  const want = bandOf(level);
+function sameBand(elevation, want) {
   return finiteOrNull(elevation?.bottom) === want.bottom && finiteOrNull(elevation?.top) === want.top && elevation?.topInclusive === true;
 }
 
-function bandData(id, level) {
-  return { _id: id, elevation: { ...bandOf(level), topInclusive: true } };
+function bandData(id, band) {
+  return { _id: id, elevation: { ...band, topInclusive: true } };
 }
 
 function issue(id, levelId, docId, fix, severity = "warning") {
@@ -31,7 +29,7 @@ function surfaceIssues(entry, allLevels) {
   if (!isManaged(s)) return [];
   const want = surfaceLevels(level, allLevels);
   if (!sameSet(s.levels, want)) out.push(issue("surface-levels", level.id, s.id, { collection: "regions", op: "update", data: { _id: s.id, levels: want } }));
-  if (!sameBand(s.elevation, level)) out.push(issue("surface-band", level.id, s.id, { collection: "regions", op: "update", data: bandData(s.id, level) }));
+  if (!sameBand(s.elevation, bandOf(level))) out.push(issue("surface-band", level.id, s.id, { collection: "regions", op: "update", data: bandData(s.id, bandOf(level)) }));
   return out;
 }
 
@@ -57,17 +55,20 @@ function holeIssues(entry) {
   });
 }
 
-function stairIssues(entry, plan) {
+function stairTagFix(stair, shaft) {
+  return { collection: "regions", op: "update", data: { _id: stair.id, levels: shaft.levels, "flags.floorer.stops": shaft.stops } };
+}
+
+function stairIssues(entry, plan, allLevels) {
   return entry.stairs.flatMap((stair) => {
     if (!isManaged(stair)) return [];
-    const flag = stair.flags.floorer;
-    const target = findLevel(plan, flag.targetLevelId);
+    const target = findLevel(plan, stair.flags.floorer.targetLevelId);
     if (!target) return [issue("stair-target-missing", entry.level.id, stair.id, { prompt: "stair-target", docId: stair.id })];
     const { lower, upper } = orderPair(entry.level, target.level);
+    const shaft = shaftOf(lower, upper, allLevels);
     const out = [];
-    if (!sameSet(stair.levels, [lower.id, upper.id])) out.push(issue("stair-levels", entry.level.id, stair.id, { collection: "regions", op: "update", data: { _id: stair.id, levels: [lower.id, upper.id] } }));
-    if (!sameBand(stair.elevation, lower)) out.push(issue("stair-band", entry.level.id, stair.id, { collection: "regions", op: "update", data: bandData(stair.id, lower) }));
-    if (bandOf(lower).top !== bandOf(upper).bottom) out.push(issue("stair-not-adjacent", entry.level.id, stair.id, null));
+    if (!sameSet(stair.levels, shaft.levels) || !sameSet(stairStops(stair), shaft.stops)) out.push(issue("stair-levels", entry.level.id, stair.id, stairTagFix(stair, shaft)));
+    if (!sameBand(stair.elevation, shaft.band)) out.push(issue("stair-band", entry.level.id, stair.id, { collection: "regions", op: "update", data: bandData(stair.id, shaft.band) }));
     return out;
   });
 }
@@ -77,36 +78,29 @@ function stairHoleFor(surface, stairId) {
   return holes.find((h) => h.stairId === stairId) ?? null;
 }
 
-function stairOpeningFix(entry, stair, plan) {
-  const flag = stair.flags.floorer;
-  const target = findLevel(plan, flag.targetLevelId);
-  if (!target) return null;
-  const { lower, upper } = orderPair(entry.level, target.level);
-  const lowerEntry = findLevel(plan, lower.id);
-  const upperEntry = findLevel(plan, upper.id);
-  const lowerSurface = lowerEntry?.surface && isManaged(lowerEntry.surface) ? lowerEntry.surface : null;
-  const upperSurface = upperEntry?.surface && isManaged(upperEntry.surface) ? upperEntry.surface : null;
-  if (!lowerSurface && !upperSurface) return null;
-  const lowerHole = lowerSurface ? stairHoleFor(lowerSurface, stair.id) : null;
-  const upperHole = upperSurface ? stairHoleFor(upperSurface, stair.id) : null;
-  if ((!lowerSurface || lowerHole) && (!upperSurface || upperHole)) return null;
-  const shapes = Array.from(stair.shapes ?? []).map((s) => padShape(s, STAIR_OPENING_PAD));
-  if (!lowerHole && !upperHole) {
-    const [data, ...cascade] = stairOpeningUpdates(plan, stair);
-    return { collection: "regions", op: "update", data, cascade };
-  }
-  if (!lowerHole && lowerSurface) {
-    const data = holeAppendData(lowerSurface, shapes, { mirrorOf: shapes.map(() => upperHole.id), extra: { stairId: stair.id } });
-    return { collection: "regions", op: "update", data, cascade: [] };
-  }
-  const data = holeAppendData(upperSurface, shapes, { extra: { stairId: stair.id } });
-  return { collection: "regions", op: "update", data, cascade: [] };
+function updateFix([data, ...cascade]) {
+  return { collection: "regions", op: "update", data, cascade };
+}
+
+function missingOpenings(surfaces, holes, stair) {
+  const shapes = stairOpeningShapes(stair);
+  const origin = holes[0];
+  const extra = { stairId: stair.id };
+  return surfaces.flatMap((s, i) => (holes[i] ? [] : [holeAppendData(s, shapes, { mirrorOf: origin ? shapes.map(() => origin.id) : undefined, extra })]));
+}
+
+function stairOpeningFix(stair, plan) {
+  const surfaces = stairSurfaces(plan, stair);
+  const holes = surfaces.map((s) => stairHoleFor(s, stair.id));
+  if (!surfaces.length || holes.every(Boolean)) return null;
+  if (holes.every((h) => !h)) return updateFix(stairOpeningUpdates(plan, stair));
+  return updateFix(missingOpenings(surfaces, holes, stair));
 }
 
 function stairOpeningIssues(entry, plan) {
   return entry.stairs.flatMap((stair) => {
     if (!isManaged(stair)) return [];
-    const fix = stairOpeningFix(entry, stair, plan);
+    const fix = stairOpeningFix(stair, plan);
     return fix ? [issue("stair-openings", entry.level.id, stair.id, fix)] : [];
   });
 }
@@ -142,6 +136,6 @@ function gapIssues(plan) {
 
 export function lint(plan) {
   const allLevels = plan.levels.map((e) => e.level);
-  const perLevel = plan.levels.filter((e) => e.managed).flatMap((e) => [...surfaceIssues(e, allLevels), ...holeIssues(e), ...stairIssues(e, plan), ...stairOpeningIssues(e, plan)]);
+  const perLevel = plan.levels.filter((e) => e.managed).flatMap((e) => [...surfaceIssues(e, allLevels), ...holeIssues(e), ...stairIssues(e, plan, allLevels), ...stairOpeningIssues(e, plan)]);
   return [...perLevel, ...overlapIssues(plan), ...gapIssues(plan)];
 }

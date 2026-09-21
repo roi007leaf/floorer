@@ -1,4 +1,4 @@
-import { bandOf, findLevel, isManaged, orderPair } from "./floor-plan.js";
+import { findLevel, isManaged, orderPair, shaftLevels, shaftOf } from "./floor-plan.js";
 import { holeAppendData, stairRemovalUpdates } from "./holes.js";
 import { padShape, STAIR_OPENING_PAD } from "./shapes.js";
 
@@ -6,14 +6,20 @@ function findStair(plan, stairId) {
   return plan.levels.flatMap((e) => e.stairs).find((s) => s.id === stairId) ?? null;
 }
 
-function stairUpdate(stair, lower, upper) {
+function allLevels(plan) {
+  return plan.levels.map((e) => e.level);
+}
+
+function stairUpdate(stair, lower, upper, plan) {
+  const shaft = shaftOf(lower, upper, allLevels(plan));
   return {
     _id: stair.id,
     name: `Stair ${lower.name} ↔ ${upper.name}`,
-    elevation: { ...bandOf(lower), topInclusive: true },
-    levels: [lower.id, upper.id],
+    elevation: { ...shaft.band, topInclusive: true },
+    levels: shaft.levels,
     "flags.floorer.levelId": lower.id,
     "flags.floorer.targetLevelId": upper.id,
+    "flags.floorer.stops": shaft.stops,
   };
 }
 
@@ -25,28 +31,35 @@ function afterRemoval(surface, removals) {
 }
 
 function managedSurface(entry, removals) {
-  const surface = entry.surface;
+  const surface = entry?.surface;
   return surface && isManaged(surface) ? afterRemoval(surface, removals) : null;
 }
 
-function additions(lowerEntry, upperEntry, shapes, removals, extra) {
-  const lower = managedSurface(lowerEntry, removals);
-  const upper = managedSurface(upperEntry, removals);
-  if (!upper) return lower ? [holeAppendData(lower, shapes, { extra })] : [];
-  const upperUpdate = holeAppendData(upper, shapes, { extra });
-  if (!lower) return [upperUpdate];
-  return [upperUpdate, holeAppendData(lower, shapes, { mirrorOf: upperUpdate.ids, extra })];
-}
-
-export function stairOpeningUpdates(plan, stair, removals = []) {
+export function stairSurfaces(plan, stair, removals = []) {
   const flag = stair.flags.floorer;
   const fromEntry = findLevel(plan, flag.levelId);
   const targetEntry = findLevel(plan, flag.targetLevelId);
   if (!fromEntry || !targetEntry) return [];
   const { lower, upper } = orderPair(fromEntry.level, targetEntry.level);
-  const [lowerEntry, upperEntry] = [findLevel(plan, lower.id), findLevel(plan, upper.id)];
-  const shapes = Array.from(stair.shapes ?? []).map((s) => padShape(s, STAIR_OPENING_PAD));
-  return additions(lowerEntry, upperEntry, shapes, removals, { stairId: stair.id });
+  return shaftLevels(lower, upper, allLevels(plan))
+    .map((l) => managedSurface(findLevel(plan, l.id), removals))
+    .filter(Boolean)
+    .reverse();
+}
+
+export function stairOpeningShapes(stair) {
+  return Array.from(stair.shapes ?? []).map((s) => padShape(s, STAIR_OPENING_PAD));
+}
+
+function additions(surfaces, shapes, extra) {
+  const [origin, ...rest] = surfaces;
+  if (!origin) return [];
+  const originUpdate = holeAppendData(origin, shapes, { extra });
+  return [originUpdate, ...rest.map((s) => holeAppendData(s, shapes, { mirrorOf: originUpdate.ids, extra }))];
+}
+
+export function stairOpeningUpdates(plan, stair, removals = []) {
+  return additions(stairSurfaces(plan, stair, removals), stairOpeningShapes(stair), { stairId: stair.id });
 }
 
 export function stairRetargetUpdates(plan, stairId, fromLevelId, newTargetLevelId) {
@@ -60,7 +73,7 @@ export function stairRetargetUpdates(plan, stairId, fromLevelId, newTargetLevelI
   const surfaceRemovals = stairRemovalUpdates(plan, stairId);
   const nextStair = { ...stair, flags: { ...stair.flags, floorer: { ...current, levelId: lower.id, targetLevelId: upper.id } } };
   return {
-    stair: stairUpdate(stair, lower, upper),
+    stair: stairUpdate(stair, lower, upper, plan),
     surfaceRemovals,
     surfaceAdditions: stairOpeningUpdates(plan, nextStair, surfaceRemovals),
   };

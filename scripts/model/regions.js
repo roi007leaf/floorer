@@ -1,5 +1,5 @@
 import { FLAG_VERSION, ROLES } from "../constants.js";
-import { bandOf, orderPair, surfaceLevels } from "./floor-plan.js";
+import { bandOf, orderPair, shaftOf, surfaceLevels } from "./floor-plan.js";
 
 export function surfaceBehavior(level) {
   const placement = bandOf(level).top === null ? "bottom" : "both";
@@ -42,16 +42,17 @@ export function stairColor(index) {
   return STAIR_PALETTE[index % STAIR_PALETTE.length];
 }
 
-export function stairCreateData(levelA, levelB, shapes, actions, index = 0) {
+export function stairCreateData(levelA, levelB, shapes, actions, index = 0, allLevels = []) {
   const { lower, upper } = orderPair(levelA, levelB);
+  const shaft = shaftOf(lower, upper, allLevels);
   return {
     name: `Stair ${lower.name} ↔ ${upper.name}`,
     color: stairColor(index),
     shapes,
-    elevation: band(lower),
-    levels: [lower.id, upper.id],
+    elevation: { ...shaft.band, topInclusive: true },
+    levels: shaft.levels,
     behaviors: [stairBehavior(actions)],
-    flags: { floorer: { role: ROLES.STAIR, levelId: lower.id, targetLevelId: upper.id, index, managed: true, v: FLAG_VERSION } },
+    flags: { floorer: { role: ROLES.STAIR, levelId: lower.id, targetLevelId: upper.id, stops: shaft.stops, index, managed: true, v: FLAG_VERSION } },
   };
 }
 

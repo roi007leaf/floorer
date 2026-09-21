@@ -22,9 +22,65 @@ test("clean plan has no issues", () => {
   const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [
     S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 }, holes: [{ id: "so1", stairId: "st", mirrorOf: "so2" }] }),
     S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 }, holes: [{ id: "so2", stairId: "st" }] }),
-    ST("st", "f1", "f2", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
+    ST("st", "f1", "f2", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 20 } }),
   ] });
   expect(lint(plan)).toEqual([]);
+});
+
+const f3 = () => L("f3", 20, 30, ["f3"]);
+
+function shaftPlan({ levels, elevation, stops, holes = { s1: true, s2: true, s3: true } }) {
+  return buildFloorPlan({ levels: [f1(), f2(), f3()], regions: [
+    S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 }, holes: holes.s1 ? [{ id: "so1", stairId: "st", mirrorOf: "so3" }] : [] }),
+    S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 }, holes: holes.s2 ? [{ id: "so2", stairId: "st", mirrorOf: "so3" }] : [] }),
+    S("s3", "f3", { levels: ["f3"], elevation: { bottom: 20, top: 30 }, holes: holes.s3 ? [{ id: "so3", stairId: "st" }] : [] }),
+    { ...ST("st", "f1", "f3", { levels, elevation }), flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f3", stops, managed: true } } },
+  ] });
+}
+
+test("three-level shaft tagged to every level with openings everywhere is clean", () => {
+  expect(lint(shaftPlan({ levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 }, stops: ["f2"] }))).toEqual([]);
+});
+
+test("stair-levels fix tags the intermediate level and records it as a stop", () => {
+  const issues = lint(shaftPlan({ levels: ["f1", "f3"], elevation: { bottom: 0, top: 30 }, stops: [] }));
+  expect(ids(issues)).toEqual(["stair-levels"]);
+  expect(issues[0].fix.data).toEqual({ _id: "st", levels: ["f1", "f2", "f3"], "flags.floorer.stops": ["f2"] });
+});
+
+test("stair-levels flags a stale stops flag even when the tag set is right", () => {
+  const issues = lint(shaftPlan({ levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 }, stops: [] }));
+  expect(ids(issues)).toEqual(["stair-levels"]);
+});
+
+test("stair-band fix spans lower bottom to upper top across the shaft", () => {
+  const issues = lint(shaftPlan({ levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 10 }, stops: ["f2"] }));
+  expect(ids(issues)).toEqual(["stair-band"]);
+  expect(issues[0].fix.data).toEqual({ _id: "st", elevation: { bottom: 0, top: 30, topInclusive: true } });
+});
+
+test("stair-openings cuts the missing stop opening mirrored from the top surface", () => {
+  const issues = lint(shaftPlan({ levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 }, stops: ["f2"], holes: { s1: true, s2: false, s3: true } }));
+  expect(ids(issues)).toEqual(["stair-openings"]);
+  expect(issues[0].fix.data._id).toBe("s2");
+  expect(issues[0].fix.data["flags.floorer.holes"][0]).toEqual({ id: expect.any(String), mirrorOf: "so3", stairId: "st" });
+  expect(issues[0].fix.cascade).toEqual([]);
+});
+
+test("stair-openings with no openings anywhere cuts all three, mirrored from the top", () => {
+  const issues = lint(shaftPlan({ levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 }, stops: ["f2"], holes: { s1: false, s2: false, s3: false } }));
+  const { data, cascade } = issues[0].fix;
+  expect(data._id).toBe("s3");
+  expect(cascade.map((u) => u._id)).toEqual(["s2", "s1"]);
+  expect(cascade.every((u) => u["flags.floorer.holes"][0].mirrorOf === data["flags.floorer.holes"][0].id)).toBe(true);
+});
+
+test("stair-openings with only the top missing appends it without a mirror and leaves the rest alone", () => {
+  const issues = lint(shaftPlan({ levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 }, stops: ["f2"], holes: { s1: true, s2: true, s3: false } }));
+  const { data, cascade } = issues[0].fix;
+  expect(data._id).toBe("s3");
+  expect(data["flags.floorer.holes"][0].mirrorOf).toBeUndefined();
+  expect(cascade).toEqual([]);
 });
 
 test("surface-missing yields footprint intent fix", () => {
@@ -112,7 +168,7 @@ test("stair-levels and stair-band", () => {
   const issues = lint(plan);
   expect(ids(issues)).toEqual(expect.arrayContaining(["stair-levels", "stair-band"]));
   expect(issues.find((i) => i.id === "stair-levels").fix.data.levels).toEqual(["f1", "f2"]);
-  expect(issues.find((i) => i.id === "stair-band").fix.data).toEqual({ _id: "st", elevation: { bottom: 0, top: 10, topInclusive: true } });
+  expect(issues.find((i) => i.id === "stair-band").fix.data).toEqual({ _id: "st", elevation: { bottom: 0, top: 20, topInclusive: true } });
 });
 
 test("stair-target-missing", () => {
@@ -168,7 +224,7 @@ test("level-gap flags the upper level and cascades the fix to its regions", () =
   const plan = buildFloorPlan({ levels: [f1(), L("f2", 15, 20, ["f1", "f2"])], regions: [
     S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
     S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 15, top: 20 } }),
-    ST("st", "f1", "f2", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
+    ST("st", "f1", "f2", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 20 } }),
   ] });
   const issue = lint(plan).find((i) => i.id === "level-gap");
   expect(issue).toMatchObject({ levelId: "f2", docId: "f1", label: "FLOORER.Issue.level-gap" });
@@ -176,7 +232,10 @@ test("level-gap flags the upper level and cascades the fix to its regions", () =
     collection: "levels",
     op: "update",
     data: { _id: "f2", elevation: { bottom: 10, top: 20 } },
-    cascade: [{ _id: "s2", elevation: { bottom: 10, top: 20, topInclusive: true } }],
+    cascade: [
+      { _id: "s2", elevation: { bottom: 10, top: 20, topInclusive: true } },
+      { _id: "st", elevation: { bottom: 0, top: 20, topInclusive: true } },
+    ],
   });
 });
 
@@ -220,34 +279,26 @@ test("stair-openings targets only the lower surface when the upper already has t
   expect(issue.fix.cascade).toEqual([]);
 });
 
-test("stair-not-adjacent is clean when the bands touch", () => {
-  const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [
-    S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
-    S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 } }),
-    ST("st", "f1", "f2", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
-  ] });
-  expect(ids(lint(plan))).not.toContain("stair-not-adjacent");
-});
-
-test("stair-not-adjacent flags a stair whose bands leave a gap", () => {
+test("a stair across a band gap spans the gap and raises only level-gap", () => {
   const far = L("far", 20, 30, ["f1", "far"]);
   const plan = buildFloorPlan({ levels: [f1(), far], regions: [
-    S("s1", "f1", { levels: ["f1", "far"], elevation: { bottom: 0, top: 10 } }),
-    S("sf", "far", { levels: ["f1", "far"], elevation: { bottom: 20, top: 30 } }),
-    ST("st", "f1", "far", { levels: ["f1", "far"], elevation: { bottom: 0, top: 10 } }),
+    S("s1", "f1", { levels: ["f1", "far"], elevation: { bottom: 0, top: 10 }, holes: [{ id: "so1", stairId: "st", mirrorOf: "sof" }] }),
+    S("sf", "far", { levels: ["far"], elevation: { bottom: 20, top: 30 }, holes: [{ id: "sof", stairId: "st" }] }),
+    ST("st", "f1", "far", { levels: ["f1", "far"], elevation: { bottom: 0, top: 30 } }),
   ] });
-  const issue = lint(plan).find((i) => i.id === "stair-not-adjacent");
-  expect(issue).toMatchObject({ levelId: "f1", docId: "st", label: "FLOORER.Issue.stair-not-adjacent", fix: null, severity: "warning" });
+  expect(ids(lint(plan))).toEqual(["level-gap"]);
 });
 
-test("stair-not-adjacent flags overlapping bands whose lower top is not the upper bottom", () => {
+test("a stair between overlapping bands still spans lower bottom to upper top", () => {
   const over = L("over", 5, 15, ["f1", "over"]);
   const plan = buildFloorPlan({ levels: [f1(), over], regions: [
-    S("s1", "f1", { levels: ["f1", "over"], elevation: { bottom: 0, top: 10 } }),
-    S("so", "over", { levels: ["f1", "over"], elevation: { bottom: 5, top: 15 } }),
+    S("s1", "f1", { levels: ["f1", "over"], elevation: { bottom: 0, top: 10 }, holes: [{ id: "so1", stairId: "st", mirrorOf: "soo" }] }),
+    S("so", "over", { levels: ["over"], elevation: { bottom: 5, top: 15 }, holes: [{ id: "soo", stairId: "st" }] }),
     ST("st", "f1", "over", { levels: ["f1", "over"], elevation: { bottom: 0, top: 10 } }),
   ] });
-  expect(ids(lint(plan))).toContain("stair-not-adjacent");
+  const issues = lint(plan);
+  expect(ids(issues)).toEqual(["stair-band", "level-overlap"]);
+  expect(issues[0].fix.data.elevation).toEqual({ bottom: 0, top: 15, topInclusive: true });
 });
 
 test("level-overlap is severity info", () => {

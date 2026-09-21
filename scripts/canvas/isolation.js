@@ -18,7 +18,7 @@ function elevationOf(doc) {
 function homeLevels(doc) {
   const flag = doc.flags?.floorer;
   if (!flag?.levelId) return [];
-  return flag.targetLevelId ? [flag.levelId, flag.targetLevelId] : [flag.levelId];
+  return flag.targetLevelId ? [flag.levelId, flag.targetLevelId, ...(flag.stops ?? [])] : [flag.levelId];
 }
 
 class Isolation {

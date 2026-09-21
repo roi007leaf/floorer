@@ -577,6 +577,15 @@
       white-space: nowrap;
     }
 
+    .via {
+      flex: 0 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 400;
+      color: var(--floorer-muted);
+    }
+
     select.target {
       flex: 0 1 auto;
       width: 110px;

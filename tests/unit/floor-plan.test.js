@@ -1,4 +1,4 @@
-import { buildFloorPlan, surfaceLevels, orderPair, isManaged, findLevel, finiteOrNull, bandOf } from "../../scripts/model/floor-plan.js";
+import { buildFloorPlan, surfaceLevels, orderPair, isManaged, findLevel, finiteOrNull, bandOf, shaftOf, stairStops } from "../../scripts/model/floor-plan.js";
 
 const L = (id, bottom, top, vis = [id], flags = { floorer: { role: "level", managed: true } }) => ({
   id, _id: id, elevation: { bottom, top }, visibility: { levels: new Set(vis) }, flags,
@@ -81,6 +81,23 @@ test("bandOf normalises live and plain levels", () => {
 test("buildFloorPlan tolerates a null scene", () => {
   expect(buildFloorPlan(null)).toEqual({ scene: null, levels: [] });
   expect(buildFloorPlan({})).toEqual({ scene: {}, levels: [] });
+});
+
+test("buildFloorPlan lists a shaft as arriving on its stops", () => {
+  const scene = { levels: [L("f1", 0, 10), L("f2", 10, 20), L("f3", 20, 30)], regions: [R("st", "stair", "f1", { targetLevelId: "f3", stops: ["f2"] })] };
+  const plan = buildFloorPlan(scene);
+  expect(plan.levels[0].stairs.map((s) => s.id)).toEqual(["st"]);
+  expect(plan.levels[1].arrivingStairs.map((s) => s.id)).toEqual(["st"]);
+  expect(plan.levels[2].arrivingStairs.map((s) => s.id)).toEqual(["st"]);
+});
+
+test("shaftOf spans lower bottom to upper top and collects the levels inside as stops", () => {
+  const b = L("b", -Infinity, 0), f1 = L("f1", 0, 10), f2 = L("f2", 10, 20), r = L("r", 20, Infinity), half = L("h", 15, 25);
+  expect(shaftOf(f1, f2, [half, f2, f1, b, r])).toEqual({ band: { bottom: 0, top: 20 }, levels: ["f1", "f2"], stops: [] });
+  expect(shaftOf(b, r, [half, f2, f1, b, r])).toEqual({ band: { bottom: null, top: null }, levels: ["b", "f1", "f2", "h", "r"], stops: ["f1", "f2", "h"] });
+  expect(shaftOf(f1, f2)).toEqual({ band: { bottom: 0, top: 20 }, levels: ["f1", "f2"], stops: [] });
+  expect(stairStops({ flags: { floorer: { stops: ["x"] } } })).toEqual(["x"]);
+  expect(stairStops({ flags: {} })).toEqual([]);
 });
 
 test("buildFloorPlan lists arriving stairs even when the owner level is gone", () => {
