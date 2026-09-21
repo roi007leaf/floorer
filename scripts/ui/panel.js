@@ -374,10 +374,11 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     await locateRegion(canvas.scene, target.dataset.regionId, target.dataset.levelId);
   }
 
-  static #onJumpStair(_event, target) {
+  static async #onJumpStair(_event, target) {
     const { regionId, levelId } = target.dataset;
     this.#expanded = { levelId, kind: "stairs" };
     this.#highlightRegionId = regionId;
+    await view.setLevel(levelId);
     this.render();
   }
 
