@@ -1,6 +1,9 @@
 .floorer .form-group.stacked { flex-direction: column; align-items: stretch; }
 .floorer textarea { font-family: monospace; }
 
+.floorer-body { display: flex; flex-direction: column; }
+.floorer-setup-body { display: flex; flex-direction: column; gap: 6px; }
+
 .floorer-panel .floorer-head { display: flex; gap: 6px; align-items: center; padding: 4px 6px; }
 .floorer-panel .floorer-head .scene { flex: 1; font-weight: bold; }
 .floorer-panel .floorer-intent { background: rgba(255, 200, 0, 0.15); padding: 4px 6px; display: flex; gap: 6px; align-items: center; }
