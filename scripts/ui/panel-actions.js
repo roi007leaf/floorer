@@ -154,7 +154,7 @@ function intentContext(plan, intent) {
   return { ...intent, levelName: findLevel(plan, intent.levelId)?.level.name ?? intent.levelId };
 }
 
-export function panelContext(plan, { activeLevelId, issues, intent, journalSize, isolationEnabled, editingBandId = null, bandDraft = null, expanded = null }) {
+export function panelContext(plan, { activeLevelId, issues, intent, journalSize, editingBandId = null, bandDraft = null, expanded = null }) {
   const decorated = issues.map((i) => ({ ...i, fixable: !!i.fix, key: issueKey(i) }));
   return {
     sceneName: plan.scene?.name ?? "",
@@ -164,7 +164,6 @@ export function panelContext(plan, { activeLevelId, issues, intent, journalSize,
     autoFixCount: decorated.filter(isAutoFix).length,
     intent: intentContext(plan, intent),
     journalSize,
-    isolationEnabled,
   };
 }
 

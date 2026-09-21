@@ -41,7 +41,6 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       fixAll: FloorerPanel.#onFixAll,
       undo: FloorerPanel.#onUndo,
       revert: FloorerPanel.#onRevert,
-      toggleIsolation: FloorerPanel.#onToggleIsolation,
       adopt: FloorerPanel.#onAdopt,
       cancelIntent: FloorerPanel.#onCancelIntent,
       rename: FloorerPanel.#onRename,
@@ -82,16 +81,16 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _prepareContext() {
     const plan = this.plan;
-    return panelContext(plan, {
+    const context = panelContext(plan, {
       activeLevelId: view.activeLevelId,
       issues: lint(plan),
       intent: intents.current,
       journalSize: journal.size,
-      isolationEnabled: isolation.enabled,
       editingBandId: this.#editingBandId,
       bandDraft: this.#bandDraft,
       expanded: this.#expanded,
     });
+    return { ...context, dimmingActive: !!view.activeLevelId, dimmingCount: isolation.count() };
   }
 
   _onFirstRender(context, options) {
@@ -326,11 +325,6 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onRevert() {
     const ok = await DialogV2.confirm({ window: { title: "FLOORER.Panel.RevertTitle" }, content: `<p>${game.i18n.format("FLOORER.Panel.RevertConfirm", { count: journal.size })}</p>`, rejectClose: false });
     if (ok) await journal.revert();
-    this.render();
-  }
-
-  static async #onToggleIsolation() {
-    await isolation.setEnabled(!isolation.enabled);
     this.render();
   }
 

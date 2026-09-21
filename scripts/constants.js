@@ -7,6 +7,5 @@ export const SETTINGS = Object.freeze({
   AUTO_TAG: "autoTag",
   SEAL_BASEMENTS: "sealBasements",
   PANEL_POSITION: "panelPosition",
-  ISOLATION: "isolation",
 });
-export const ISOLATION_ALPHA = 0.25;
+export const ISOLATION_ALPHA = 0.12;

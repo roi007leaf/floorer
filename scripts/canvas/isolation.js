@@ -1,6 +1,5 @@
-import { ISOLATION_ALPHA, SETTINGS } from "../constants.js";
+import { ISOLATION_ALPHA } from "../constants.js";
 import { bandOf, finiteOrNull } from "../model/floor-plan.js";
-import { getSetting, setSetting } from "../settings.js";
 import { view } from "./view.js";
 
 const LAYERS = ["regions", "walls", "lighting", "sounds", "tiles"];
@@ -19,15 +18,6 @@ function elevationOf(doc) {
 class Isolation {
   #active = false;
 
-  get enabled() {
-    return getSetting(SETTINGS.ISOLATION) !== false;
-  }
-
-  async setEnabled(value) {
-    await setSetting(SETTINGS.ISOLATION, value);
-    this.refreshAll();
-  }
-
   setActive(value) {
     if (this.#active === value) return;
     this.#active = value;
@@ -44,7 +34,7 @@ class Isolation {
   }
 
   onRefresh(placeable) {
-    if (!this.#active || !this.enabled) return;
+    if (!this.#active) return;
     const level = view.activeLevel;
     if (!level) return;
     const alpha = this.alphaFor(placeable.document, level);
@@ -52,11 +42,25 @@ class Isolation {
     if (alpha !== null) placeable.eventMode = "none";
   }
 
+  count() {
+    if (!this.#active) return 0;
+    const level = view.activeLevel;
+    if (!level) return 0;
+    let n = 0;
+    for (const name of LAYERS) {
+      const layer = canvas?.[name];
+      layer?.placeables?.forEach((p) => {
+        if (this.alphaFor(p.document, level) !== null) n++;
+      });
+    }
+    return n;
+  }
+
   refreshAll() {
     for (const name of LAYERS) {
       const layer = canvas?.[name];
       layer?.placeables?.forEach((p) => {
-        if (!this.#active || !this.enabled) p.alpha = 1;
+        if (!this.#active) p.alpha = 1;
         p.renderFlags?.set({ refresh: true, refreshState: true });
       });
     }

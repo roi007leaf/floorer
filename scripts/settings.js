@@ -13,7 +13,6 @@ export function registerSettings() {
   game.settings.register(MODULE_ID, SETTINGS.MIRROR_HOLES, WORLD_BOOL(SETTINGS.MIRROR_HOLES, true));
   game.settings.register(MODULE_ID, SETTINGS.AUTO_TAG, WORLD_BOOL(SETTINGS.AUTO_TAG, true));
   game.settings.register(MODULE_ID, SETTINGS.SEAL_BASEMENTS, WORLD_BOOL(SETTINGS.SEAL_BASEMENTS, true));
-  game.settings.register(MODULE_ID, SETTINGS.ISOLATION, { scope: "client", config: false, type: Boolean, default: true });
   game.settings.register(MODULE_ID, SETTINGS.PANEL_POSITION, { scope: "client", config: false, type: Object, default: {} });
 }
 
