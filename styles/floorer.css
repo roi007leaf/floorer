@@ -964,6 +964,12 @@
     gap: 8px;
     min-height: 22px;
   }
+
+  .count.busy {
+    color: var(--floorer-muted);
+    border-style: dashed;
+    background: transparent;
+  }
 }
 
 .floorer .floorer-head .help { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; color: var(--color-text-secondary, #999); cursor: help; }

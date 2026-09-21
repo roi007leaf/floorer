@@ -175,7 +175,7 @@
     },
     "WallTrace": {
       "Title": "Trace interior walls",
-      "Hint": "Orange lines preview the walls that will be added. Adjust the sliders, then apply.",
+      "Hint": "Orange lines preview the walls that will be added. Thin lines such as tile seams are dropped by the thickness filter; raise the threshold if walls are grey.",
       "Threshold": "Darkness threshold",
       "MinLength": "Minimum length",
       "Count": "{count} walls",
@@ -184,9 +184,13 @@
       "Created": "Added {count} interior walls.",
       "NoImage": "Could not read the level image.",
       "Tip": {
-        "Threshold": "Pixels darker than this (0 = black, 1 = white) count as wall lines.",
-        "MinLength": "Traced lines shorter than this many grid squares are ignored."
-      }
+        "Threshold": "Pixels darker than this (0 = black, 1 = white) count as wall. Raise it when the wall bodies are grey rather than black.",
+        "MinLength": "Traced lines shorter than this many grid squares are ignored.",
+        "Thickness": "Only dark areas at least this many grid squares thick are kept, so tile seams and thin outlines are ignored."
+      },
+      "Thickness": "Wall thickness",
+      "Computing": "Computing…",
+      "NoThick": "No thick dark areas at this threshold"
     }
   }
 }

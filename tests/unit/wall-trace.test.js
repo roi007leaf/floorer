@@ -1,4 +1,4 @@
-import { darkMask, nearSegment, polylineLength, polylinesToSegments, simplifyPolyline, skeletonToPolylines, thin, traceInteriorWalls, traceWallSegments, withoutOutline } from "../../scripts/model/wall-trace.js";
+import { darkMask, nearSegment, openMask, polylineLength, polylinesToSegments, previewSvgLines, simplifyPolyline, skeletonToPolylines, thin, traceInteriorWalls, traceWallSegments, withoutOutline } from "../../scripts/model/wall-trace.js";
 
 function image(rows, { dark = [0, 0, 0, 255], light = [255, 255, 255, 255], clear = [0, 0, 0, 0] } = {}) {
   const height = rows.length;
@@ -113,7 +113,8 @@ test("polylineLength sums segment lengths", () => {
 
 test("traceInteriorWalls finds a dark line and drops short specks", () => {
   const img = image(["..........", ".########.", "..........", "......#...", ".........."]);
-  const lines = traceInteriorWalls(img, { threshold: 0.28, minLength: 3, epsilon: 0.5 });
+  const { polylines: lines, stats } = traceInteriorWalls(img, { threshold: 0.28, minLength: 3, epsilon: 0.5 });
+  expect(stats).toEqual({ maskPixels: 9, afterOpen: 9 });
   expect(lines).toHaveLength(1);
   expect(lines[0]).toEqual([
     [1, 1],
@@ -158,13 +159,50 @@ test("traceWallSegments maps traced lines into scene space, scales the minimum l
   const img = { ...image(["..........", ".########.", "..........", ".####.....", ".........."]), imageWidth: 20, imageHeight: 10 };
   const level = { textures: { fit: "fill" } };
   const sceneRect = { x: 0, y: 0, width: 200, height: 100 };
-  const all = traceWallSegments({ image: img, level, sceneRect, gridSize: 40, outline: [] }, { threshold: 0.28, minSquares: 1, epsilon: 0.5 });
+  const { segments: all, stats } = traceWallSegments({ image: img, level, sceneRect, gridSize: 40, outline: [] }, { threshold: 0.28, minSquares: 1, epsilon: 0.5 });
+  expect(stats.maskPixels).toBe(12);
   expect(all).toEqual([
     [20, 20, 160, 20],
     [20, 60, 80, 60],
   ]);
   const long = traceWallSegments({ image: img, level, sceneRect, gridSize: 40, outline: [] }, { threshold: 0.28, minSquares: 2, epsilon: 0.5 });
-  expect(long).toEqual([[20, 20, 160, 20]]);
+  expect(long.segments).toEqual([[20, 20, 160, 20]]);
   const masked = traceWallSegments({ image: img, level, sceneRect, gridSize: 40, outline: [[0, 24, 200, 24]] }, { threshold: 0.28, minSquares: 1, epsilon: 0.5 });
-  expect(masked).toEqual([[20, 60, 80, 60]]);
+  expect(masked.segments).toEqual([[20, 60, 80, 60]]);
+});
+
+test("openMask removes features thinner than the structuring element and keeps thick bands", () => {
+  const { mask, width, height } = maskOf(["..........", ".########.", "..........", ".########.", ".########.", ".########.", ".........."]);
+  const opened = rows(openMask(mask, width, height, 1), width, height);
+  expect(opened).toEqual(["..........", "..........", "..........", ".########.", ".########.", ".########.", ".........."]);
+  expect(rows(openMask(mask, width, height, 0), width, height)).toEqual(rows(mask, width, height));
+  expect(rows(openMask(mask, width, height, 2), width, height).every((r) => !r.includes("#"))).toBe(true);
+});
+
+test("traceInteriorWalls with a thickness drops tile seams and traces the thick wall", () => {
+  const img = image(["............", ".##########.", "............", ".##########.", ".##########.", ".##########.", "............", "..#..#..#...", "............"]);
+  const { polylines, stats } = traceInteriorWalls(img, { threshold: 0.28, minLength: 3, epsilon: 0.5, thicknessPx: 2 });
+  expect(stats.afterOpen).toBe(30);
+  expect(polylines).toHaveLength(1);
+  expect(polylines[0].every(([, y]) => y === 4)).toBe(true);
+  expect(traceInteriorWalls(img, { threshold: 0.28, minLength: 3, epsilon: 0.5, thicknessPx: 6 }).stats.afterOpen).toBe(0);
+});
+
+test("traceWallSegments converts the thickness from grid squares to downscaled pixels", () => {
+  const img = { ...image(["..........", ".########.", "..........", ".########.", ".########.", ".########.", ".........."]), imageWidth: 20, imageHeight: 14 };
+  const level = { textures: { fit: "fill" } };
+  const sceneRect = { x: 0, y: 0, width: 200, height: 140 };
+  const thick = traceWallSegments({ image: img, level, sceneRect, gridSize: 40, outline: [] }, { threshold: 0.28, minSquares: 1, thickness: 1, epsilon: 0.5 });
+  expect(thick.stats.afterOpen).toBe(24);
+  expect(thick.segments).toHaveLength(1);
+  const [x1, y1, x2, y2] = thick.segments[0];
+  expect([y1, y2]).toEqual([80, 80]);
+  expect(x1).toBeGreaterThanOrEqual(20);
+  expect(x2).toBeLessThanOrEqual(160);
+  expect(x2 - x1).toBeGreaterThanOrEqual(60);
+});
+
+test("previewSvgLines maps segments to line attributes", () => {
+  expect(previewSvgLines([[1, 2, 3, 4]])).toEqual([{ x1: 1, y1: 2, x2: 3, y2: 4 }]);
+  expect(previewSvgLines([])).toEqual([]);
 });

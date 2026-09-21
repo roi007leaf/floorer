@@ -24,6 +24,59 @@ export function darkMask({ width, height, data }, { threshold = 0.28, minAlpha =
   return mask;
 }
 
+function countOf(mask) {
+  let n = 0;
+  for (let i = 0; i < mask.length; i++) n += mask[i];
+  return n;
+}
+
+function passRows(mask, width, height, radius, keep) {
+  const out = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+    for (let x = 0; x < width; x++) {
+      let hits = 0;
+      for (let dx = -radius; dx <= radius; dx++) {
+        const xx = x + dx;
+        if (xx >= 0 && xx < width && mask[row + xx]) hits++;
+      }
+      out[row + x] = keep(hits, 2 * radius + 1) ? 1 : 0;
+    }
+  }
+  return out;
+}
+
+function passColumns(mask, width, height, radius, keep) {
+  const out = new Uint8Array(width * height);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      let hits = 0;
+      for (let dy = -radius; dy <= radius; dy++) {
+        const yy = y + dy;
+        if (yy >= 0 && yy < height && mask[yy * width + x]) hits++;
+      }
+      out[y * width + x] = keep(hits, 2 * radius + 1) ? 1 : 0;
+    }
+  }
+  return out;
+}
+
+const ALL = (hits, size) => hits === size;
+const ANY = (hits) => hits > 0;
+
+function erode(mask, width, height, radius) {
+  return passColumns(passRows(mask, width, height, radius, ALL), width, height, radius, ALL);
+}
+
+function dilate(mask, width, height, radius) {
+  return passColumns(passRows(mask, width, height, radius, ANY), width, height, radius, ANY);
+}
+
+export function openMask(mask, width, height, radius) {
+  if (!(radius > 0)) return Uint8Array.from(mask);
+  return dilate(erode(mask, width, height, radius), width, height, radius);
+}
+
 function at(mask, width, height, x, y) {
   return x >= 0 && y >= 0 && x < width && y < height ? mask[y * width + x] : 0;
 }
@@ -177,12 +230,15 @@ export function polylineLength(points) {
   return total;
 }
 
-export function traceInteriorWalls(image, { threshold = 0.28, minLength = 10, epsilon = 1.5 } = {}) {
+export function traceInteriorWalls(image, { threshold = 0.45, minLength = 10, epsilon = 1.5, thicknessPx = 0 } = {}) {
   const { width, height } = image;
-  const skel = thin(darkMask(image, { threshold }), width, height);
-  return skeletonToPolylines(skel, width, height)
+  const mask = darkMask(image, { threshold });
+  const opened = openMask(mask, width, height, Math.round(thicknessPx / 2));
+  const stats = { maskPixels: countOf(mask), afterOpen: countOf(opened) };
+  const polylines = skeletonToPolylines(thin(opened, width, height), width, height)
     .map((line) => simplifyPolyline(line, epsilon))
     .filter((line) => polylineLength(line) >= minLength);
+  return { polylines, stats };
 }
 
 export function polylinesToSegments(polylines, transform) {
@@ -209,9 +265,13 @@ export function withoutOutline(segments, outline, tol = 6) {
   });
 }
 
-export function traceWallSegments({ image, level, sceneRect, gridSize, outline }, { threshold, minSquares, epsilon = 1.5 }) {
+export function previewSvgLines(segments) {
+  return segments.map(([x1, y1, x2, y2]) => ({ x1, y1, x2, y2 }));
+}
+
+export function traceWallSegments({ image, level, sceneRect, gridSize, outline }, { threshold, minSquares, thickness = 0, epsilon = 1.5 }) {
   const { transform, sx, sy } = imageTransform(image, level, sceneRect);
-  const minLength = (minSquares * gridSize) / ((sx + sy) / 2);
-  const polylines = traceInteriorWalls(image, { threshold, minLength, epsilon });
-  return withoutOutline(polylinesToSegments(polylines, transform), outline);
+  const pxPerSquare = gridSize / ((sx + sy) / 2);
+  const { polylines, stats } = traceInteriorWalls(image, { threshold, minLength: minSquares * pxPerSquare, thicknessPx: thickness * pxPerSquare, epsilon });
+  return { segments: withoutOutline(polylinesToSegments(polylines, transform), outline), stats };
 }

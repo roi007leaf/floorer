@@ -7,6 +7,9 @@
     <label for="{{id}}-minSquares" data-tooltip="{{localize 'FLOORER.WallTrace.Tip.MinLength'}}">{{localize "FLOORER.WallTrace.MinLength"}}</label>
     <input type="range" id="{{id}}-minSquares" name="minSquares" min="0.1" max="3" step="0.1" value="{{minSquares}}">
     <output name="minSquares" for="{{id}}-minSquares">{{minSquares}}</output>
+    <label for="{{id}}-thickness" data-tooltip="{{localize 'FLOORER.WallTrace.Tip.Thickness'}}">{{localize "FLOORER.WallTrace.Thickness"}}</label>
+    <input type="range" id="{{id}}-thickness" name="thickness" min="0.05" max="0.6" step="0.05" value="{{thickness}}">
+    <output name="thickness" for="{{id}}-thickness">{{thickness}}</output>
   </div>
   <div class="status">
     <span class="chip info count">{{#if loading}}{{localize "FLOORER.WallTrace.Loading"}}{{else}}{{localize "FLOORER.WallTrace.Count" count=count}}{{/if}}</span>

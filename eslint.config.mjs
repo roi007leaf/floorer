@@ -11,7 +11,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: "module",
-      globals: { ...globals.browser, game: "readonly", canvas: "readonly", ui: "readonly", Hooks: "readonly", foundry: "readonly", CONFIG: "readonly", CONST: "readonly", PIXI: "readonly" },
+      globals: { ...globals.browser, game: "readonly", canvas: "readonly", ui: "readonly", Hooks: "readonly", foundry: "readonly", CONFIG: "readonly", CONST: "readonly" },
     },
   },
   {
