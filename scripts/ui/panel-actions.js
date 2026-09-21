@@ -164,13 +164,18 @@ function intentContext(plan, intent) {
   return { ...intent, levelName: findLevel(plan, intent.levelId)?.level.name ?? intent.levelId };
 }
 
+function isInfo(issue) {
+  return issue.severity === "info";
+}
+
 export function panelContext(plan, { activeLevelId, issues, intent, journalSize, editingBandId = null, bandDraft = null, expanded = null }) {
   const decorated = issues.map((i) => ({ ...i, fixable: !!i.fix, key: issueKey(i) }));
   return {
     sceneName: plan.scene?.name ?? "",
     rows: plan.levels.map((e) => row(e, plan, activeLevelId, decorated, { editingBandId, bandDraft, expanded })).reverse(),
     issues: decorated,
-    issueCount: decorated.length,
+    issueCount: decorated.filter((i) => !isInfo(i)).length,
+    infoCount: decorated.filter(isInfo).length,
     autoFixCount: decorated.filter(isAutoFix).length,
     intent: intentContext(plan, intent),
     journalSize,

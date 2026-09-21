@@ -139,9 +139,10 @@
       "stair-band": "Stair outside lower band",
       "stair-target-missing": "Stair target missing",
       "stair-openings": "Stair has no opening in the floor between its levels",
+      "stair-not-adjacent": "Stair connects levels whose elevation bands don't touch — tokens can't change level. Edit a band so the top of the lower level equals the bottom of the upper one.",
       "level-overlap": "Overlaps another level",
       "level-gap": "Gap below this level",
-      "level-overlap-with": "Overlaps {levels}"
+      "level-overlap-with": "Overlaps {levels} — fine when the levels don't share floor space (e.g. a cellar under open ground)"
     },
     "Common": {
       "Cancel": "Cancel"

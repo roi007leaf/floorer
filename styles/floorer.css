@@ -513,6 +513,12 @@
       text-overflow: ellipsis;
     }
 
+    .issue.info {
+      background: transparent;
+      border-color: var(--floorer-border);
+      color: var(--floorer-muted);
+    }
+
     button.icon.fix {
       --floorer-control: 18px;
       margin: 0 -5px 0 2px;

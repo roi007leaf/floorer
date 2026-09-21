@@ -54,6 +54,18 @@ test("panelContext groups issues per row and counts them", () => {
   expect(ctx.autoFixCount).toBe(1);
 });
 
+test("panelContext counts only warning issues in issueCount, info separately", () => {
+  const plan = buildFloorPlan({ levels: [L("b", -10, 0, ["b"], "basement"), L("f1", 0, 10, ["f1"]), L("f2", 10, 20, ["f2"])], regions: [] });
+  const issues = [
+    { id: "surface-missing", label: "a", levelId: "b", docId: null, fix: { intent: "footprint", levelId: "b" }, severity: "warning" },
+    { id: "level-overlap", label: "c", levelId: "f1", docId: "f2", fix: null, severity: "info" },
+    { id: "level-overlap", label: "c", levelId: "f2", docId: "f1", fix: null, severity: "info" },
+  ];
+  const ctx = panelContext(plan, { activeLevelId: null, issues, intent: null, journalSize: 0 });
+  expect(ctx.issueCount).toBe(1);
+  expect(ctx.infoCount).toBe(2);
+});
+
 test("panelContext default stair target is the level above, else below", () => {
   const plan = buildFloorPlan({ levels: [L("b", -10, 0, ["b"], "basement"), L("f1", 0, 10, ["f1"]), L("f2", 10, 20, ["f2"])], regions: [] });
   const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0 });

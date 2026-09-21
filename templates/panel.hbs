@@ -99,8 +99,8 @@
     {{#if issues.length}}
     <div class="row-issues">
       {{#each issues}}
-      <span class="chip warning" data-tooltip="{{localize label levels=levels}}">
-        <i class="fas fa-triangle-exclamation"></i>{{localize label levels=levels}}
+      <span class="chip issue {{severity}}" data-tooltip="{{localize label levels=levels}}">
+        {{#if (eq severity "info")}}<i class="fas fa-circle-info"></i>{{else}}<i class="fas fa-triangle-exclamation"></i>{{/if}}{{localize label levels=levels}}
         {{#if fixable}}<button type="button" class="icon fix" data-action="fix" data-issue-key="{{key}}" data-tooltip="{{localize 'FLOORER.Panel.Fix'}}"><i class="fas fa-wand-magic-sparkles"></i></button>{{/if}}
       </span>
       {{/each}}

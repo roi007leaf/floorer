@@ -19,8 +19,8 @@ function bandData(id, level) {
   return { _id: id, elevation: { ...bandOf(level), topInclusive: true } };
 }
 
-function issue(id, levelId, docId, fix) {
-  return { id, levelId, docId, label: `FLOORER.Issue.${id}`, fix };
+function issue(id, levelId, docId, fix, severity = "warning") {
+  return { id, levelId, docId, label: `FLOORER.Issue.${id}`, fix, severity };
 }
 
 function surfaceIssues(entry, allLevels) {
@@ -67,6 +67,7 @@ function stairIssues(entry, plan) {
     const out = [];
     if (!sameSet(stair.levels, [lower.id, upper.id])) out.push(issue("stair-levels", entry.level.id, stair.id, { collection: "regions", op: "update", data: { _id: stair.id, levels: [lower.id, upper.id] } }));
     if (!sameBand(stair.elevation, lower)) out.push(issue("stair-band", entry.level.id, stair.id, { collection: "regions", op: "update", data: bandData(stair.id, lower) }));
+    if (bandOf(lower).top !== bandOf(upper).bottom) out.push(issue("stair-not-adjacent", entry.level.id, stair.id, null));
     return out;
   });
 }
@@ -121,7 +122,7 @@ function overlapIssues(plan) {
   const out = [];
   for (let i = 0; i < managed.length; i++) {
     for (let j = i + 1; j < managed.length; j++) {
-      if (overlaps(managed[i].level, managed[j].level)) out.push(issue("level-overlap", managed[i].level.id, managed[j].level.id, null));
+      if (overlaps(managed[i].level, managed[j].level)) out.push(issue("level-overlap", managed[i].level.id, managed[j].level.id, null, "info"));
     }
   }
   return out;

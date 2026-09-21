@@ -220,6 +220,54 @@ test("stair-openings targets only the lower surface when the upper already has t
   expect(issue.fix.cascade).toEqual([]);
 });
 
+test("stair-not-adjacent is clean when the bands touch", () => {
+  const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [
+    S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
+    S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 } }),
+    ST("st", "f1", "f2", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
+  ] });
+  expect(ids(lint(plan))).not.toContain("stair-not-adjacent");
+});
+
+test("stair-not-adjacent flags a stair whose bands leave a gap", () => {
+  const far = L("far", 20, 30, ["f1", "far"]);
+  const plan = buildFloorPlan({ levels: [f1(), far], regions: [
+    S("s1", "f1", { levels: ["f1", "far"], elevation: { bottom: 0, top: 10 } }),
+    S("sf", "far", { levels: ["f1", "far"], elevation: { bottom: 20, top: 30 } }),
+    ST("st", "f1", "far", { levels: ["f1", "far"], elevation: { bottom: 0, top: 10 } }),
+  ] });
+  const issue = lint(plan).find((i) => i.id === "stair-not-adjacent");
+  expect(issue).toMatchObject({ levelId: "f1", docId: "st", label: "FLOORER.Issue.stair-not-adjacent", fix: null, severity: "warning" });
+});
+
+test("stair-not-adjacent flags overlapping bands whose lower top is not the upper bottom", () => {
+  const over = L("over", 5, 15, ["f1", "over"]);
+  const plan = buildFloorPlan({ levels: [f1(), over], regions: [
+    S("s1", "f1", { levels: ["f1", "over"], elevation: { bottom: 0, top: 10 } }),
+    S("so", "over", { levels: ["f1", "over"], elevation: { bottom: 5, top: 15 } }),
+    ST("st", "f1", "over", { levels: ["f1", "over"], elevation: { bottom: 0, top: 10 } }),
+  ] });
+  expect(ids(lint(plan))).toContain("stair-not-adjacent");
+});
+
+test("level-overlap is severity info", () => {
+  const plan = buildFloorPlan({ levels: [L("a", 0, 10, ["a"]), L("b", 5, 15, ["b"])], regions: [
+    S("sa", "a", { levels: ["a"], elevation: { bottom: 0, top: 10 } }),
+    S("sb", "b", { levels: ["b"], elevation: { bottom: 5, top: 15 } }),
+  ] });
+  const issue = lint(plan).find((i) => i.id === "level-overlap");
+  expect(issue.severity).toBe("info");
+});
+
+test("level-gap is severity warning", () => {
+  const plan = buildFloorPlan({ levels: [f1(), L("f2", 15, 20, ["f1", "f2"])], regions: [
+    S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
+    S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 15, top: 20 } }),
+  ] });
+  const issue = lint(plan).find((i) => i.id === "level-gap");
+  expect(issue.severity).toBe("warning");
+});
+
 test("touching managed levels have no level-gap", () => {
   const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [
     S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
