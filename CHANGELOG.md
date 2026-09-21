@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0-alpha.2
+
+- Re-running Whole map / drawing a footprint replaces the level's surface instead of adding a second one; new  lint with one-click delete.
+- Seal / unseal tooltips explain when a cellar must be unsealed (openings upward).
+- Draw walls activates the wall drawing tool.
+- Removed the experimental interior-wall tracing and door/window tools; outline walls stay.
+
 ## 1.0.0-alpha.1
 
 First public alpha for testers. Foundry VTT v14 only.
