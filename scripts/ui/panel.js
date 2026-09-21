@@ -8,7 +8,8 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyFix, armDraw, issueKey, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, armDraw, issueKey, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
+import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
@@ -17,6 +18,8 @@ const RERENDER_HOOKS = ["createRegion", "updateRegion", "deleteRegion", "createL
 export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static #instance = null;
   #unsubscribe = [];
+  #editingBandId = null;
+  #bandDraft = null;
 
   static DEFAULT_OPTIONS = {
     id: `${MODULE_ID}-panel`,
@@ -39,6 +42,9 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       adopt: FloorerPanel.#onAdopt,
       cancelIntent: FloorerPanel.#onCancelIntent,
       rename: FloorerPanel.#onRename,
+      editBand: FloorerPanel.#onEditBand,
+      commitBand: FloorerPanel.#onCommitBand,
+      cancelBand: FloorerPanel.#onCancelBand,
     },
   };
 
@@ -71,6 +77,8 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       intent: intents.current,
       journalSize: journal.size,
       isolationEnabled: isolation.enabled,
+      editingBandId: this.#editingBandId,
+      bandDraft: this.#bandDraft,
     });
   }
 
@@ -91,6 +99,61 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         this.#startRename(span);
       });
     });
+    this.#bindBandEditor();
+  }
+
+  #bandEditor() {
+    return this.element.querySelector(".band-editor");
+  }
+
+  #bindBandEditor() {
+    const editor = this.#bandEditor();
+    if (!editor) return;
+    editor.querySelectorAll("input").forEach((input) => {
+      input.addEventListener("input", () => {
+        this.#bandDraft = this.#readRaw();
+      });
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") this.#commitBand();
+        else if (ev.key === "Escape") this.#cancelBand();
+        else return;
+        ev.preventDefault();
+        ev.stopPropagation();
+      });
+    });
+    editor.querySelector("input")?.focus();
+  }
+
+  #readRaw() {
+    const editor = this.#bandEditor();
+    if (!editor) return null;
+    return { bottom: editor.querySelector("[name='band-bottom']").value, top: editor.querySelector("[name='band-top']").value };
+  }
+
+  #readBand() {
+    const raw = this.#readRaw();
+    return raw ? parseBand(raw) : null;
+  }
+
+  #showBandError(show) {
+    const node = this.element.querySelector(".band-error");
+    if (node) node.hidden = !show;
+  }
+
+  async #commitBand() {
+    const levelId = this.#editingBandId;
+    const band = this.#readBand();
+    if (!band) return this.#showBandError(true);
+    this.#editingBandId = null;
+    this.#bandDraft = null;
+    await applyBandChange(canvas.scene, this.plan, levelId, band);
+    this.render();
+  }
+
+  #cancelBand() {
+    this.#editingBandId = null;
+    this.#bandDraft = null;
+    this.render();
   }
 
   #nameSpan(levelId) {
@@ -225,5 +288,19 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #onRename(_event, target) {
     this.#startRename(this.#nameSpan(target.dataset.levelId));
+  }
+
+  static #onEditBand(_event, target) {
+    this.#editingBandId = target.dataset.levelId;
+    this.#bandDraft = null;
+    this.render();
+  }
+
+  static #onCommitBand() {
+    return this.#commitBand();
+  }
+
+  static #onCancelBand() {
+    this.#cancelBand();
   }
 }

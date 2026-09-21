@@ -3,6 +3,7 @@ import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
 import { surfaceCreateData, wholeSceneShape } from "../model/regions.js";
 import { bandOf, findLevel } from "../model/floor-plan.js";
+import { bandChangeUpdates } from "../model/band-edit.js";
 
 function bandLabel(level) {
   const band = bandOf(level);
@@ -57,12 +58,22 @@ function stairLinks(entry, plan) {
   return dedupeStairLinks([...owned, ...arriving], plan);
 }
 
-function row(entry, plan, activeLevelId, issues) {
+function inputValue(v) {
+  return v === null || v === undefined ? "" : String(v);
+}
+
+function bandInputs(level, editing, draft) {
+  const band = editing && draft ? draft : bandOf(level);
+  return { editingBand: editing, bandBottom: inputValue(band.bottom), bandTop: inputValue(band.top) };
+}
+
+function row(entry, plan, activeLevelId, issues, { editingBandId, bandDraft }) {
   const holes = entry.surface?.flags?.floorer?.holes ?? [];
   return {
     id: entry.level.id,
     name: entry.level.name,
     band: bandLabel(entry.level),
+    ...bandInputs(entry.level, entry.level.id === editingBandId, bandDraft),
     active: entry.level.id === activeLevelId,
     managed: entry.managed,
     hasSurface: !!entry.surface,
@@ -90,11 +101,11 @@ function intentContext(plan, intent) {
   return { ...intent, levelName: findLevel(plan, intent.levelId)?.level.name ?? intent.levelId };
 }
 
-export function panelContext(plan, { activeLevelId, issues, intent, journalSize, isolationEnabled }) {
+export function panelContext(plan, { activeLevelId, issues, intent, journalSize, isolationEnabled, editingBandId = null, bandDraft = null }) {
   const decorated = issues.map((i) => ({ ...i, fixable: !!i.fix, key: issueKey(i) }));
   return {
     sceneName: plan.scene?.name ?? "",
-    rows: plan.levels.map((e) => row(e, plan, activeLevelId, decorated)).reverse(),
+    rows: plan.levels.map((e) => row(e, plan, activeLevelId, decorated, { editingBandId, bandDraft })).reverse(),
     issues: decorated,
     issueCount: decorated.length,
     autoFixCount: decorated.filter(isAutoFix).length,
@@ -104,21 +115,44 @@ export function panelContext(plan, { activeLevelId, issues, intent, journalSize,
   };
 }
 
-function regionBefore(scene, data) {
-  const doc = scene.regions.get(data._id);
+function elevationBefore(doc) {
+  const inclusive = doc.elevation?.topInclusive;
+  return { ...bandOf(doc), ...(inclusive === undefined ? {} : { topInclusive: inclusive }) };
+}
+
+function fieldBefore(doc, key) {
+  if (key === "elevation") return elevationBefore(doc);
+  if (key === "levels") return Array.from(doc.levels);
+  return foundry.utils.deepClone(key.includes(".") ? foundry.utils.getProperty(doc, key) : doc[key]);
+}
+
+function docBefore(scene, collection, data) {
+  const doc = scene[collection].get(data._id);
   const before = { _id: data._id };
   for (const key of Object.keys(data)) {
-    if (key === "_id") continue;
-    before[key] = key.includes(".") ? foundry.utils.deepClone(foundry.utils.getProperty(doc, key)) : foundry.utils.deepClone(key === "levels" ? Array.from(doc.levels) : doc[key]);
+    if (key !== "_id") before[key] = fieldBefore(doc, key);
   }
   return before;
 }
 
+async function runUpdates(scene, collection, updates, before) {
+  if (!updates.length) return;
+  const name = EMBEDDED_NAMES[collection];
+  await journal.run({ op: "update", collection, scene, before }, () => scene.updateEmbeddedDocuments(name, updates));
+}
+
 async function applyUpdateFix(scene, fix) {
   const { ids, ...data } = fix.data;
-  const before = [regionBefore(scene, data)];
-  const name = EMBEDDED_NAMES[fix.collection];
-  await journal.run({ op: "update", collection: fix.collection, scene, before }, () => scene.updateEmbeddedDocuments(name, [data]));
+  await runUpdates(scene, fix.collection, [data], [docBefore(scene, fix.collection, data)]);
+  const cascade = fix.cascade ?? [];
+  await runUpdates(scene, "regions", cascade, cascade.map((d) => docBefore(scene, "regions", d)));
+}
+
+export async function applyBandChange(scene, plan, levelId, band) {
+  const { levels, regions, tokens, before } = bandChangeUpdates(plan, levelId, band);
+  await runUpdates(scene, "levels", levels, before.levels);
+  await runUpdates(scene, "regions", regions, before.regions);
+  await runUpdates(scene, "tokens", tokens, before.tokens);
 }
 
 async function retargetStair(scene, docId, plan) {

@@ -103,3 +103,14 @@ test("panelContext dedupes stairs to the same level and shows count", () => {
   const f1 = ctx.rows.find((r) => r.id === "f1");
   expect(f1).toMatchObject({ stairCount: 2, stairLinks: "\u2194 L2 \u00d72" });
 });
+
+test("panelContext marks the row whose band is being edited with input values", () => {
+  const plan = buildFloorPlan({ levels: [L("f1", 0, 10, ["f1"]), L("r", 10, Infinity, ["r"], "roof")], regions: [] });
+  const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false, editingBandId: "r" });
+  const byId = Object.fromEntries(ctx.rows.map((r) => [r.id, r]));
+  expect(byId.r).toMatchObject({ editingBand: true, bandBottom: "10", bandTop: "" });
+  expect(byId.f1).toMatchObject({ editingBand: false, bandBottom: "0", bandTop: "10" });
+  const drafted = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false, editingBandId: "r", bandDraft: { bottom: "12", top: "" } });
+  expect(drafted.rows.find((r) => r.id === "r")).toMatchObject({ bandBottom: "12", bandTop: "" });
+  expect(drafted.rows.find((r) => r.id === "f1")).toMatchObject({ bandBottom: "0", bandTop: "10" });
+});

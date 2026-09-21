@@ -58,6 +58,11 @@
       "Setup": "Set up levels",
       "DimOthers": "Dim other floors",
       "Rename": "Rename level",
+      "EditBand": "Edit elevation range",
+      "BandBottom": "Bottom elevation (blank for −∞)",
+      "BandTop": "Top elevation (blank for ∞)",
+      "CommitBand": "Apply elevation range",
+      "BandInvalid": "Enter numbers (or leave blank for open ends) with bottom not above top.",
       "HasSurface": "Surface defined",
       "NoSurface": "No surface yet",
       "Holes": "Holes",
@@ -98,6 +103,7 @@
       "stair-band": "Stair outside lower band",
       "stair-target-missing": "Stair target missing",
       "level-overlap": "Overlaps another level",
+      "level-gap": "Gap below this level",
       "level-overlap-with": "Overlaps {levels}"
     },
     "Common": {

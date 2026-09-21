@@ -1,6 +1,7 @@
 const EMBEDDED = Object.freeze({
   levels: "Level",
   regions: "Region",
+  tokens: "Token",
   tiles: "Tile",
   walls: "Wall",
   lights: "AmbientLight",

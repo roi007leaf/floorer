@@ -1,5 +1,6 @@
 import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, surfaceLevels } from "./floor-plan.js";
 import { holeAppendData } from "./holes.js";
+import { bandChangeUpdates, bandGaps } from "./band-edit.js";
 
 export function sameSet(a, b) {
   const sa = new Set(a);
@@ -85,8 +86,20 @@ function overlapIssues(plan) {
   return out;
 }
 
+function gapFix(plan, { lowerId, upperId }) {
+  const lower = bandOf(findLevel(plan, lowerId).level);
+  const upper = bandOf(findLevel(plan, upperId).level);
+  const band = { bottom: lower.top, top: upper.top };
+  const { regions } = bandChangeUpdates(plan, upperId, band);
+  return { collection: "levels", op: "update", data: { _id: upperId, elevation: band }, cascade: regions };
+}
+
+function gapIssues(plan) {
+  return bandGaps(plan).map((gap) => issue("level-gap", gap.upperId, gap.lowerId, gapFix(plan, gap)));
+}
+
 export function lint(plan) {
   const allLevels = plan.levels.map((e) => e.level);
   const perLevel = plan.levels.filter((e) => e.managed).flatMap((e) => [...surfaceIssues(e, allLevels), ...holeIssues(e), ...stairIssues(e, plan)]);
-  return [...perLevel, ...overlapIssues(plan)];
+  return [...perLevel, ...overlapIssues(plan), ...gapIssues(plan)];
 }

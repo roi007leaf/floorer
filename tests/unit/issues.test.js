@@ -163,3 +163,27 @@ test("level-overlap has no fix", () => {
   const issue = lint(plan).find((i) => i.id === "level-overlap");
   expect(issue.fix).toBeNull();
 });
+
+test("level-gap flags the upper level and cascades the fix to its regions", () => {
+  const plan = buildFloorPlan({ levels: [f1(), L("f2", 15, 20, ["f1", "f2"])], regions: [
+    S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
+    S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 15, top: 20 } }),
+    ST("st", "f1", "f2", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
+  ] });
+  const issue = lint(plan).find((i) => i.id === "level-gap");
+  expect(issue).toMatchObject({ levelId: "f2", docId: "f1", label: "FLOORER.Issue.level-gap" });
+  expect(issue.fix).toEqual({
+    collection: "levels",
+    op: "update",
+    data: { _id: "f2", elevation: { bottom: 10, top: 20 } },
+    cascade: [{ _id: "s2", elevation: { bottom: 10, top: 20, topInclusive: true } }],
+  });
+});
+
+test("touching managed levels have no level-gap", () => {
+  const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [
+    S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 } }),
+    S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 } }),
+  ] });
+  expect(ids(lint(plan))).not.toContain("level-gap");
+});

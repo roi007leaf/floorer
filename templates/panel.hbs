@@ -22,7 +22,17 @@
   <li class="level {{#if active}}active{{/if}} {{#if managed}}managed{{else}}unmanaged{{/if}}" data-level-id="{{id}}">
     <div class="row-head">
       <span class="caret" data-action="activate" data-level-id="{{id}}"><i class="fas {{#if active}}fa-chevron-down{{else}}fa-chevron-right{{/if}}"></i></span>
-      <span class="rail">{{band}}</span>
+      {{#if editingBand}}
+      <span class="band-editor" data-level-id="{{id}}">
+        <input type="number" name="band-bottom" value="{{bandBottom}}" placeholder="−∞" step="any" data-tooltip="{{localize 'FLOORER.Panel.BandBottom'}}">
+        <span class="sep">–</span>
+        <input type="number" name="band-top" value="{{bandTop}}" placeholder="∞" step="any" data-tooltip="{{localize 'FLOORER.Panel.BandTop'}}">
+        <button type="button" class="icon confirm" data-action="commitBand" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.CommitBand'}}"><i class="fas fa-check"></i></button>
+        <button type="button" class="icon" data-action="cancelBand" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Common.Cancel'}}"><i class="fas fa-xmark"></i></button>
+      </span>
+      {{else}}
+      <span class="rail {{#if managed}}editable{{/if}}" {{#if managed}}data-action="editBand" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.EditBand'}}"{{/if}}>{{band}}</span>
+      {{/if}}
       <span class="name" data-action="activate" data-level-id="{{id}}" data-name="{{name}}">{{name}}</span>
       {{#if managed}}<button type="button" class="icon rename" data-action="rename" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Rename'}}"><i class="fas fa-pen"></i></button>{{/if}}
       <span class="spacer"></span>
@@ -34,6 +44,7 @@
         {{#unless managed}}<button type="button" class="chip dashed" data-action="adopt" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.AdoptHint'}}"><i class="fas fa-hand"></i>{{localize "FLOORER.Panel.Adopt"}}</button>{{/unless}}
       </span>
     </div>
+    {{#if editingBand}}<p class="error band-error" hidden>{{localize "FLOORER.Panel.BandInvalid"}}</p>{{/if}}
     {{#if active}}{{#if managed}}
     <div class="row-tools">
       <div class="group">
