@@ -33,7 +33,6 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       setup: FloorerPanel.#onSetup,
       activate: FloorerPanel.#onActivate,
       drawFootprint: FloorerPanel.#onDraw,
-      drawRect: FloorerPanel.#onDraw,
       wholeScene: FloorerPanel.#onWholeScene,
       drawHole: FloorerPanel.#onDraw,
       drawStair: FloorerPanel.#onDraw,
@@ -285,9 +284,8 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static #onDraw(_event, target) {
-    const { action, levelId } = target.dataset;
+    const { action, levelId, tool } = target.dataset;
     const kind = action === "drawHole" ? INTENTS.HOLE : action === "drawStair" ? INTENTS.STAIR : INTENTS.FOOTPRINT;
-    const tool = action === "drawRect" ? "rectangle" : action === "drawFootprint" ? "polygon" : "rectangle";
     const targetLevelId = kind === INTENTS.STAIR ? this.element.querySelector(`select[name="target-${levelId}"]`)?.value : undefined;
     if (kind === INTENTS.STAIR && !targetLevelId) return ui.notifications.warn(game.i18n.localize("FLOORER.Panel.NoTarget"));
     armDraw(kind, levelId, tool, targetLevelId);

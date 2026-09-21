@@ -204,3 +204,17 @@ test("stair mirror skipped when setting off", async () => {
   await intents.onCreateRegion(created, {}, "gm1");
   expect(s.updateEmbeddedDocuments).not.toHaveBeenCalled();
 });
+
+test("stair drawn as a polygon mirrors the polygon opening into both surfaces", async () => {
+  const f1 = L("f1", 0, 10, ["f1", "f2"]);
+  const f2 = L("f2", 10, 20, ["f1", "f2"]);
+  const s = scene([f1, f2], [S("s1", "f1"), { ...S("s2", "f2"), elevation: { bottom: 10, top: 20 } }]);
+  const polygon = { type: "polygon", points: [0, 0, 10, 0, 10, 10], hole: false };
+  const created = { id: "st", shapes: [polygon], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", managed: true } } };
+  await intents.onCreateRegion(created, {}, "gm1");
+  const updates = s.updateEmbeddedDocuments.mock.calls[0][1];
+  for (const u of updates) {
+    expect(u.shapes.at(-1)).toEqual({ ...polygon, hole: true });
+    expect(u["flags.floorer.holes"].at(-1).stairId).toBe("st");
+  }
+});

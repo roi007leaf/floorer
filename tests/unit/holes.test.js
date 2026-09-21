@@ -106,3 +106,21 @@ test("holeRemovalUpdates removes the hole and its mirror below", () => {
   expect(out[1]["flags.floorer.holes"]).toEqual([{ id: "u2" }]);
   expect(holeRemovalUpdates(plan, "zz")).toEqual([]);
 });
+
+const polygon = { type: "polygon", points: [0, 0, 10, 0, 10, 10, 0, 10], hole: false };
+const ellipse = { type: "ellipse", x: 5, y: 5, radiusX: 3, radiusY: 2, rotation: 0, hole: false };
+
+test("holeAppendData keeps polygon and ellipse geometry, only flipping hole", () => {
+  const upd = holeAppendData(S("f1"), [polygon, ellipse], {});
+  expect(upd.shapes[1]).toEqual({ ...polygon, hole: true });
+  expect(upd.shapes[2]).toEqual({ ...ellipse, hole: true });
+  expect(polygon.hole).toBe(false);
+});
+
+test("holeUpdates mirrors a polygon into the level below unchanged", () => {
+  const below = FL("b", S("b"));
+  const upd = holeUpdates(FL("f1", S("f1"), below), [polygon], "hole");
+  expect(upd[0].shapes[1]).toEqual({ ...polygon, hole: true });
+  expect(upd[1].shapes[1]).toEqual({ ...polygon, hole: true });
+  expect(upd[1]["flags.floorer.holes"][0].mirrorOf).toBe(upd[0].ids[0]);
+});
