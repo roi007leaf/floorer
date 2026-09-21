@@ -80,7 +80,22 @@ export function isOutlineWall(doc, levelId) {
   return isFloorerWall(doc, levelId, [ROLES.OUTLINE_WALL]);
 }
 
+function tracedHoleAt(entry, index) {
+  return entry.surface.flags?.floorer?.holes?.[index]?.traced === true;
+}
+
+function outlineShapesFor(entry) {
+  let holeIndex = 0;
+  return Array.from(entry.surface.shapes ?? []).filter((shape) => {
+    const s = plain(shape);
+    if (!s?.hole) return true;
+    const keep = tracedHoleAt(entry, holeIndex);
+    holeIndex++;
+    return keep;
+  });
+}
+
 export function outlineWallsFor(entry) {
   if (!entry?.surface) return null;
-  return wallCreateData(entry.level.id, outlineSegments(entry.surface.shapes));
+  return wallCreateData(entry.level.id, outlineSegments(outlineShapesFor(entry)));
 }

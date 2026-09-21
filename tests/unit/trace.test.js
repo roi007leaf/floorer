@@ -95,6 +95,32 @@ test("simplifyRing keeps at least four points", () => {
   expect(simplifyRing([0, 0, 1, 0, 1, 1], 5)).toEqual([0, 0, 1, 0, 1, 1]);
 });
 
+function notchedRectangleRows(width, height, notch) {
+  return Array.from({ length: height }, (_, y) => {
+    const cut = y < notch ? notch - y : 0;
+    return "#".repeat(width - cut) + ".".repeat(cut);
+  });
+}
+
+test("simplifyRing collapses a 45° staircase edge into a diagonal with few points", () => {
+  const { rings } = trace(notchedRectangleRows(30, 20, 10));
+  const simplified = simplifyRing(rings[0].points, 1);
+  expect(simplified.length / 2).toBeLessThanOrEqual(6);
+});
+
+function circleRows(size) {
+  const r = size / 2;
+  const cx = r - 0.5;
+  const cy = r - 0.5;
+  return Array.from({ length: size }, (_, y) => Array.from({ length: size }, (_, x) => (Math.hypot(x - cx, y - cy) <= r - 0.5 ? "#" : ".")).join(""));
+}
+
+test("simplifyRing keeps a circle-ish blob detailed at fine epsilon", () => {
+  const { rings } = trace(circleRows(24));
+  const simplified = simplifyRing(rings[0].points, 0.4);
+  expect(simplified.length / 2).toBeGreaterThanOrEqual(16);
+});
+
 test("simplifyRings raises epsilon until the point budget is met", () => {
   const points = [];
   for (let i = 0; i < 100; i++) points.push(i, i % 2);

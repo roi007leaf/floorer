@@ -23,7 +23,7 @@ function band(level) {
 }
 
 function holeEntriesFor(shapes) {
-  return shapes.filter((s) => s.hole).map(() => ({ id: foundry.utils.randomID() }));
+  return shapes.filter((s) => s.hole).map(() => ({ id: foundry.utils.randomID(), traced: true }));
 }
 
 export function surfaceCreateData(level, allLevels, shapes) {

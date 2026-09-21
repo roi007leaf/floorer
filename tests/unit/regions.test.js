@@ -26,8 +26,8 @@ test("surfaceCreateData registers a hole entry for every hole:true shape, in sha
   const tracedShapes = [shapes[0], holeA, holeB];
   const data = surfaceCreateData(f1, [f1], tracedShapes);
   expect(data.flags.floorer.holes).toHaveLength(2);
-  expect(data.flags.floorer.holes[0]).toEqual({ id: expect.any(String) });
-  expect(data.flags.floorer.holes[1]).toEqual({ id: expect.any(String) });
+  expect(data.flags.floorer.holes[0]).toEqual({ id: expect.any(String), traced: true });
+  expect(data.flags.floorer.holes[1]).toEqual({ id: expect.any(String), traced: true });
   expect(data.flags.floorer.holes[0].id).not.toBe(data.flags.floorer.holes[1].id);
 });
 

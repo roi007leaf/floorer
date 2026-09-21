@@ -60,6 +60,23 @@ test("outlineWallsFor builds walls from the entry surface", () => {
   expect(outlineWallsFor({ level: { id: "f1" }, surface: null })).toBeNull();
 });
 
+const hole = { type: "polygon", points: [1, 1, 1, 1, 5, 1, 5, 5], hole: true };
+
+test("outlineWallsFor includes a traced hole ring from the image trace", () => {
+  const entry = { level: { id: "f1" }, surface: { shapes: [rect, hole], flags: { floorer: { holes: [{ id: "h1", traced: true }] } } } };
+  expect(outlineWallsFor(entry)).toHaveLength(7);
+});
+
+test("outlineWallsFor skips a stair opening's hole ring", () => {
+  const entry = { level: { id: "f1" }, surface: { shapes: [rect, hole], flags: { floorer: { holes: [{ id: "h1", stairId: "s1" }] } } } };
+  expect(outlineWallsFor(entry)).toHaveLength(4);
+});
+
+test("outlineWallsFor skips a drawn hole's ring", () => {
+  const entry = { level: { id: "f1" }, surface: { shapes: [rect, hole], flags: { floorer: { holes: [{ id: "h1" }] } } } };
+  expect(outlineWallsFor(entry)).toHaveLength(4);
+});
+
 test("interiorWallCreateData tags traced walls with the interior role", () => {
   const data = interiorWallCreateData("f1", [[0, 0, 10, 0]]);
   expect(data).toEqual([{ c: [0, 0, 10, 0], levels: ["f1"], flags: { floorer: { role: "interiorWall", levelId: "f1", managed: true, v: 1 } } }]);

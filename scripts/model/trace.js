@@ -249,10 +249,11 @@ export function imageTransform(image, level, sceneRect) {
   return { transform, sx, sy };
 }
 
-export function traceFootprint(image, level, sceneRect, { epsilon = 1.5, maxPoints = 2000, fullCoverage = 0.98 } = {}) {
+export function traceFootprint(image, level, sceneRect, { epsilonScenePx = 4, maxPoints = 6000, fullCoverage = 0.98 } = {}) {
   const threshold = level.background?.alphaThreshold ?? 0.75;
   const { coverage, rings } = traceAlpha({ ...image, threshold });
   if (coverage >= fullCoverage || !rings.some((r) => !r.hole)) return null;
-  const { transform } = imageTransform(image, level, sceneRect);
+  const { transform, sx, sy } = imageTransform(image, level, sceneRect);
+  const epsilon = epsilonScenePx / Math.max((sx + sy) / 2, 1e-6);
   return ringsToShapes(simplifyRings(rings, epsilon, maxPoints), transform);
 }

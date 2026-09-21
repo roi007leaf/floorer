@@ -4,7 +4,7 @@ import { canTrace, traceFootprint } from "../model/trace.js";
 
 async function tracedShapes(scene, level) {
   if (!canTrace(level)) return null;
-  const image = await loadAlpha(level.background.src);
+  const image = await loadAlpha(level.background.src, 2048);
   if (!image) return null;
   return traceFootprint(image, level, scene.dimensions.sceneRect);
 }
