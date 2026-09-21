@@ -5,6 +5,7 @@ import { stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
 import { footprintShapesForLevel } from "./footprint.js";
 import { bandOf, buildFloorPlan, findLevel, stairStops } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
+import { lint } from "../model/issues.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
 import { holeRemovalUpdates, stairRemovalUpdates, tracedHoleMirror } from "../model/holes.js";
 import { stairRetargetUpdates } from "../model/stair-retarget.js";
@@ -262,6 +263,15 @@ export async function wholeSceneSurface(scene, entry, allLevels) {
   if (!getSetting(SETTINGS.MIRROR_HOLES)) return;
   const update = tracedHoleMirror(buildFloorPlan(scene), entry.level.id);
   if (update) await applyHoleAdditions(scene, [update]);
+  await mirrorHolesFromAbove(scene, entry.level.id);
+}
+
+async function mirrorHolesFromAbove(scene, levelId) {
+  const plan = buildFloorPlan(scene);
+  const surfaceId = findLevel(plan, levelId)?.surface?.id;
+  if (!surfaceId) return;
+  const fixes = lint(plan).filter((i) => i.id === "hole-unmirrored" && i.fix?.data?._id === surfaceId);
+  for (const issue of fixes) await applyFix(scene, issue, buildFloorPlan(scene));
 }
 
 export async function adoptLevel(scene, level) {
