@@ -32,7 +32,7 @@
       "Basements": "Basements",
       "Roof": "Roof level",
       "FloorHeight": "Floor height",
-      "GroundBottom": "Ground floor bottom elevation",
+      "GroundBottom": "Ground elevation",
       "Images": "Floor images",
       "ImagesHint": "Optional background image per level. Leave a row blank to keep the scene background.",
       "Submit": "Create levels",

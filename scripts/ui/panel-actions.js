@@ -34,14 +34,32 @@ function aggregateIssues(plan, issues) {
   return issues.filter((i) => i.id !== "level-overlap").concat(merged);
 }
 
-function levelNameOf(plan, id) {
-  return findLevel(plan, id)?.level.name ?? id;
+function dedupeStairLinks(ids, plan) {
+  const grouped = new Map();
+  for (const id of ids) {
+    const entry = findLevel(plan, id);
+    const level = entry?.level;
+    if (!level) continue;
+    const key = level.name;
+    if (!grouped.has(key)) {
+      grouped.set(key, { level, count: 0 });
+    }
+    grouped.get(key).count++;
+  }
+  return Array.from(grouped.values())
+    .map(({ level, count }) => {
+      const band = bandOf(level);
+      const bandStr = `${band.bottom ?? "-\u221e"}\u2013${band.top ?? "\u221e"}`;
+      const countStr = count > 1 ? ` \u00d7${count}` : "";
+      return `\u2194 ${level.name} (${bandStr})${countStr}`;
+    })
+    .join(", ");
 }
 
 function stairLinks(entry, plan) {
   const owned = entry.stairs.map((s) => s.flags?.floorer?.targetLevelId);
   const arriving = entry.arrivingStairs.map((s) => s.flags?.floorer?.levelId);
-  return [...owned, ...arriving].map((id) => `\u2194 ${levelNameOf(plan, id)}`).join(", ");
+  return dedupeStairLinks([...owned, ...arriving], plan);
 }
 
 function row(entry, plan, activeLevelId, issues) {

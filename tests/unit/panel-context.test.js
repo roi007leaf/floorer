@@ -11,8 +11,8 @@ test("panelContext rows", () => {
   const ctx = panelContext(plan, { activeLevelId: "f1", issues: [{ id: "surface-missing", label: "x", levelId: "b", fix: { intent: "footprint", levelId: "b" } }], intent: null, journalSize: 2, isolationEnabled: true });
   expect(ctx.rows.map((r) => r.id)).toEqual(["r", "f1", "b"]);
   const f1 = ctx.rows[1];
-  expect(f1).toMatchObject({ active: true, hasSurface: true, holeCount: 1, openingCount: 1, stairCount: 1, stairLinks: "\u2194 r", band: "0–10", sealed: false });
-  expect(ctx.rows[0]).toMatchObject({ stairCount: 1, stairLinks: "\u2194 f1", openingCount: 0 });
+  expect(f1).toMatchObject({ active: true, hasSurface: true, holeCount: 1, openingCount: 1, stairCount: 1, stairLinks: "↔ r (10–∞)", band: "0–10", sealed: false });
+  expect(ctx.rows[0]).toMatchObject({ stairCount: 1, stairLinks: "↔ f1 (0–10)", openingCount: 0 });
   expect(f1.targets.map((t) => t.id)).toEqual(["r", "b"]);
   expect(ctx.rows[0].band).toBe("10–∞");
   expect(ctx.rows[2].sealed).toBe(true);
@@ -89,7 +89,17 @@ test("panelContext stair count includes owned and arriving stairs", () => {
   ] });
   const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false });
   const byId = Object.fromEntries(ctx.rows.map((r) => [r.id, r]));
-  expect(byId.f1).toMatchObject({ stairCount: 2, stairLinks: "\u2194 L2, \u2194 B1" });
-  expect(byId.f2).toMatchObject({ stairCount: 1, stairLinks: "\u2194 Ground" });
-  expect(byId.b).toMatchObject({ stairCount: 1, stairLinks: "\u2194 Ground" });
+  expect(byId.f1).toMatchObject({ stairCount: 2, stairLinks: "\u2194 L2 (10\u201320), \u2194 B1 (-10\u20130)" });
+  expect(byId.f2).toMatchObject({ stairCount: 1, stairLinks: "\u2194 Ground (0\u201310)" });
+  expect(byId.b).toMatchObject({ stairCount: 1, stairLinks: "\u2194 Ground (0\u201310)" });
+});
+
+test("panelContext dedupes stairs to the same level and shows count", () => {
+  const plan = buildFloorPlan({ levels: [{ ...L("f1", 0, 10, ["f1"]), name: "Ground" }, { ...L("f2", 10, 20, ["f2"]), name: "L2" }], regions: [
+    { id: "s1", flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", managed: true } } },
+    { id: "s2", flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", managed: true } } },
+  ] });
+  const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false });
+  const f1 = ctx.rows.find((r) => r.id === "f1");
+  expect(f1).toMatchObject({ stairCount: 2, stairLinks: "\u2194 L2 (10\u201320) \u00d72" });
 });
