@@ -1,12 +1,13 @@
 {
   "name": "floorer",
-  "version": "0.1.0",
+  "version": "1.0.0-alpha.1",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "jest --maxWorkers=50%",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build": "node scripts-dev/build.mjs"
   },
   "devDependencies": {
     "@babel/core": "^7.28.3",
@@ -22,8 +23,14 @@
   },
   "jest": {
     "testEnvironment": "jsdom",
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
-    "transform": { "^.+\\.js$": "babel-jest" },
-    "testMatch": ["<rootDir>/tests/**/*.test.js"]
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    },
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ]
   }
 }

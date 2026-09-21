@@ -18,5 +18,6 @@ export default [
     files: ["tests/**/*.js"],
     languageOptions: { ecmaVersion: 2024, sourceType: "module", globals: { ...globals.jest, ...globals.node, game: "writable", canvas: "writable", ui: "writable", Hooks: "writable", foundry: "writable", CONFIG: "writable", CONST: "writable" } },
   },
-  { ignores: ["node_modules/", "docs/"] },
+  { files: ["scripts-dev/**/*.mjs"], languageOptions: { ecmaVersion: 2024, sourceType: "module", globals: { ...globals.node } } },
+  { ignores: ["node_modules/", "docs/", "dist/"] },
 ];
