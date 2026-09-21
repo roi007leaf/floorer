@@ -250,10 +250,10 @@ function panTo(center) {
   if (center) canvas.animatePan({ x: center.x, y: center.y });
 }
 
-export async function locateRegion(scene, regionId) {
+export async function locateRegion(scene, regionId, rowLevelId) {
   const region = scene.regions.get(regionId);
   if (!region) return;
-  await focusLevel(region.flags?.floorer?.levelId);
+  if (!region.object) await focusLevel(rowLevelId ?? region.flags?.floorer?.levelId);
   panTo(shapeCenter(Array.from(region.shapes)[0]));
   canvas.regions?.activate();
   region.object?.control({ releaseOthers: true });

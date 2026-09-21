@@ -322,7 +322,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onLocateRegion(_event, target) {
-    await locateRegion(canvas.scene, target.dataset.regionId);
+    await locateRegion(canvas.scene, target.dataset.regionId, target.dataset.levelId);
   }
 
   static async #onLocateHole(_event, target) {
