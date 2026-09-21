@@ -25,7 +25,7 @@ test("hasSoleDefaultLevel detects the untouched core default level", () => {
   expect(hasSoleDefaultLevel({ levels: [def] })).toBe(true);
   expect(hasSoleDefaultLevel({ levels: [def, { id: "x", elevation: { bottom: 0, top: 10 }, flags: {} }] })).toBe(false);
   expect(hasSoleDefaultLevel({ levels: [{ ...def, flags: { floorer: { managed: true } } }] })).toBe(false);
-  expect(hasSoleDefaultLevel({ levels: [{ ...def, elevation: { bottom: 0, top: 10 } }] })).toBe(false);
+  expect(hasSoleDefaultLevel({ levels: [{ ...def, elevation: { bottom: 0, top: 20 } }] })).toBe(true);
   expect(hasSoleDefaultLevel(null)).toBe(false);
 });
 

@@ -76,3 +76,12 @@ test("reuseUpdate writes name and elevation only for an adopted default", () => 
   expect(upd.elevation).toEqual({ bottom: 0, top: 10 });
   expect(upd.background).toEqual({ src: "a.webp" });
 });
+
+test("sole unmanaged level with the core 0-20 default band is adopted", () => {
+  const core = { ...defaultLevel(), name: "Level", elevation: { bottom: 0, top: 20 } };
+  const out = planLevelChanges({ levels: [core] }, opts);
+  expect(out.reuse[0].existing.id).toBe("defaultLevel0000");
+  expect(out.reuse[0].data.name).toBe("L1");
+  expect(out.create.map((c) => c.name)).toEqual(["L2"]);
+  expect(out.conflicts).toEqual([]);
+});

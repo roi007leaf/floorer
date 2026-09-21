@@ -1,5 +1,5 @@
 import { bandsFor, levelName } from "../model/levels.js";
-import { bandOf, isManaged } from "../model/floor-plan.js";
+import { isManaged } from "../model/floor-plan.js";
 
 export function bandLabelOf(band) {
   return `${band.bottom}–${band.top === null ? "∞" : band.top}`;
@@ -17,9 +17,7 @@ export function imagesFromValues(values, opts) {
 
 export function hasSoleDefaultLevel(scene) {
   const levels = Array.from(scene?.levels ?? []);
-  if (levels.length !== 1 || isManaged(levels[0])) return false;
-  const band = bandOf(levels[0]);
-  return band.bottom === 0 && band.top === null;
+  return levels.length === 1 && !isManaged(levels[0]);
 }
 
 export function limitImages(images, levelCount) {

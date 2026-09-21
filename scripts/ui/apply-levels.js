@@ -16,7 +16,7 @@ export function parseImages(raw) {
 
 function adoptableDefault(existing, opts) {
   if (opts.adoptDefault === false || existing.length !== 1 || isManaged(existing[0])) return null;
-  return sameBand(existing[0].elevation, { bottom: 0, top: null }) ? existing[0] : null;
+  return existing[0];
 }
 
 function groundData(generated, opts) {
