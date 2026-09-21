@@ -2,6 +2,7 @@ import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, surfaceLevels } 
 import { holeAppendData } from "./holes.js";
 import { bandChangeUpdates, bandGaps } from "./band-edit.js";
 import { stairOpeningUpdates } from "./stair-retarget.js";
+import { padShape, STAIR_OPENING_PAD } from "./shapes.js";
 
 export function sameSet(a, b) {
   const sa = new Set(a);
@@ -88,7 +89,7 @@ function stairOpeningFix(entry, stair, plan) {
   const lowerHole = lowerSurface ? stairHoleFor(lowerSurface, stair.id) : null;
   const upperHole = upperSurface ? stairHoleFor(upperSurface, stair.id) : null;
   if ((!lowerSurface || lowerHole) && (!upperSurface || upperHole)) return null;
-  const shapes = Array.from(stair.shapes ?? []);
+  const shapes = Array.from(stair.shapes ?? []).map((s) => padShape(s, STAIR_OPENING_PAD));
   if (!lowerHole && !upperHole) {
     const [data, ...cascade] = stairOpeningUpdates(plan, stair);
     return { collection: "regions", op: "update", data, cascade };

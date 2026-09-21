@@ -3,6 +3,7 @@ import { journal } from "../../scripts/journal/journal.js";
 import { lint } from "../../scripts/model/issues.js";
 import { buildFloorPlan } from "../../scripts/model/floor-plan.js";
 import { STAIR_PALETTE } from "../../scripts/model/regions.js";
+import { padShape, STAIR_OPENING_PAD } from "../../scripts/model/shapes.js";
 
 const rect = { type: "rectangle", x: 0, y: 0, width: 10, height: 10, rotation: 0, hole: false };
 const L = (id, bottom, top, vis) => ({ id, _id: id, name: id, elevation: { bottom, top }, visibility: { levels: new Set(vis) }, flags: { floorer: { role: "level", managed: true } } });
@@ -228,7 +229,7 @@ test("stair drawn as a polygon mirrors the polygon opening into both surfaces", 
   await intents.onCreateRegion(created, {}, "gm1");
   const updates = s.updateEmbeddedDocuments.mock.calls[0][1];
   for (const u of updates) {
-    expect(u.shapes.at(-1)).toEqual({ ...polygon, hole: true });
+    expect(u.shapes.at(-1)).toEqual({ ...padShape(polygon, STAIR_OPENING_PAD), hole: true });
     expect(u["flags.floorer.holes"].at(-1).stairId).toBe("st");
   }
 });

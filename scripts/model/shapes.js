@@ -41,3 +41,44 @@ export function shapeCenter(shape) {
   if (s.type === "circle" || s.type === "ellipse") return { x: s.x, y: s.y };
   return null;
 }
+
+export const STAIR_OPENING_PAD = 6;
+
+function padRectangle(s, pad) {
+  return { ...s, x: s.x - pad, y: s.y - pad, width: s.width + 2 * pad, height: s.height + 2 * pad };
+}
+
+function padEllipse(s, pad) {
+  return { ...s, radiusX: s.radiusX + pad, radiusY: s.radiusY + pad };
+}
+
+function padCircle(s, pad) {
+  return { ...s, radius: s.radius + pad };
+}
+
+function padPoint(x, y, center, pad) {
+  const dx = x - center.x;
+  const dy = y - center.y;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return [x, y];
+  return [x + (dx / len) * pad, y + (dy / len) * pad];
+}
+
+function padPolygon(s, pad) {
+  const points = s.points ?? [];
+  const center = polygonCenter(points);
+  if (!center) return { ...s };
+  const padded = [];
+  for (let i = 0; i < points.length; i += 2) padded.push(...padPoint(points[i], points[i + 1], center, pad));
+  return { ...s, points: padded };
+}
+
+export function padShape(shape, pad) {
+  const s = plain(shape);
+  if (!s) return s;
+  if (s.type === "rectangle") return padRectangle(s, pad);
+  if (s.type === "ellipse") return padEllipse(s, pad);
+  if (s.type === "circle") return padCircle(s, pad);
+  if (s.type === "polygon") return padPolygon(s, pad);
+  return { ...s };
+}

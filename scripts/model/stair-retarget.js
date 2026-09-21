@@ -1,5 +1,6 @@
 import { bandOf, findLevel, isManaged, orderPair } from "./floor-plan.js";
 import { holeAppendData, stairRemovalUpdates } from "./holes.js";
+import { padShape, STAIR_OPENING_PAD } from "./shapes.js";
 
 function findStair(plan, stairId) {
   return plan.levels.flatMap((e) => e.stairs).find((s) => s.id === stairId) ?? null;
@@ -44,7 +45,8 @@ export function stairOpeningUpdates(plan, stair, removals = []) {
   if (!fromEntry || !targetEntry) return [];
   const { lower, upper } = orderPair(fromEntry.level, targetEntry.level);
   const [lowerEntry, upperEntry] = [findLevel(plan, lower.id), findLevel(plan, upper.id)];
-  return additions(lowerEntry, upperEntry, Array.from(stair.shapes ?? []), removals, { stairId: stair.id });
+  const shapes = Array.from(stair.shapes ?? []).map((s) => padShape(s, STAIR_OPENING_PAD));
+  return additions(lowerEntry, upperEntry, shapes, removals, { stairId: stair.id });
 }
 
 export function stairRetargetUpdates(plan, stairId, fromLevelId, newTargetLevelId) {
