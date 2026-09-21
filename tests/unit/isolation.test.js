@@ -59,3 +59,10 @@ test("alphaFor keeps stairs visible on both connected levels", () => {
   expect(isolation.alphaFor(stair, active)).toBeNull();
   expect(isolation.alphaFor(stair, { id: "r", elevation: { bottom: 20, top: null } })).toBe(0.12);
 });
+
+test("alphaFor dims outline walls on other floors and shows them at home", () => {
+  const wallOn = (levelId) => ({ c: [0, 0, 1, 1], levels: new Set([levelId]), flags: { floorer: { role: "outlineWall", levelId, managed: true } } });
+  expect(isolation.alphaFor(wallOn("f1"), f1)).toBeNull();
+  expect(isolation.alphaFor(wallOn("f2"), f1)).toBe(0.12);
+  expect(isolation.alphaFor(wallOn("f1"), roof)).toBe(0.12);
+});

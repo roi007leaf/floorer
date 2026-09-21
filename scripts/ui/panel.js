@@ -8,7 +8,7 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, removeOutlineWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -55,6 +55,8 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       deleteStair: FloorerPanel.#onDeleteStair,
       deleteHole: FloorerPanel.#onDeleteHole,
       toggleSeal: FloorerPanel.#onToggleSeal,
+      buildWalls: FloorerPanel.#onBuildWalls,
+      removeWalls: FloorerPanel.#onRemoveWalls,
     },
   };
 
@@ -308,7 +310,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const plan = this.plan;
     const entry = findLevel(plan, target.dataset.levelId);
     if (!entry) return;
-    await wholeSceneSurface(canvas.scene, entry, plan.levels.map((e) => e.level));
+    await wholeSceneSurface(canvas.scene, entry, plan.levels.map((e) => e.level), { walls: getSetting(SETTINGS.AUTO_WALLS) });
     this.render();
   }
 
@@ -412,6 +414,20 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onToggleSeal(_event, target) {
     const sealed = target.dataset.sealed === "true";
     await applySeal(canvas.scene, this.plan, target.dataset.levelId, !sealed);
+    this.render();
+  }
+
+  static async #onBuildWalls(_event, target) {
+    const entry = this.#entry(target.dataset.levelId);
+    if (!entry?.surface) return ui.notifications.warn(game.i18n.localize("FLOORER.Panel.WallsNeedSurface"));
+    const count = await buildOutlineWalls(canvas.scene, entry);
+    ui.notifications.info(game.i18n.format("FLOORER.Panel.WallsBuilt", { count }));
+    this.render();
+  }
+
+  static async #onRemoveWalls(_event, target) {
+    const entry = this.#entry(target.dataset.levelId);
+    if (entry) await removeOutlineWalls(canvas.scene, entry);
     this.render();
   }
 

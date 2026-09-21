@@ -1,5 +1,6 @@
-import { MODULE_ID } from "../constants.js";
+import { MODULE_ID, SETTINGS } from "../constants.js";
 import { applyLevels } from "./apply-levels.js";
+import { getSetting, setSetting } from "../settings.js";
 import { hasSoleDefaultLevel, imagesFromValues, limitImages, previewRows } from "./setup-form.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -110,6 +111,7 @@ export class SetupDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       rows,
       manyLevels: rows.length >= MANY_LEVELS,
       canAdoptDefault: hasSoleDefaultLevel(scene),
+      outlineWalls: getSetting(SETTINGS.AUTO_WALLS),
     };
   }
 
@@ -167,6 +169,7 @@ export class SetupDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onSubmit(event, form) {
     const opts = readForm(form);
+    await setSetting(SETTINGS.AUTO_WALLS, form.elements.outlineWalls?.checked ?? true);
     const count = levelCount(opts);
     if (count === 0) return this.#showError("FLOORER.Setup.NoLevels");
     const { images, truncated } = limitImages(opts.images, count);

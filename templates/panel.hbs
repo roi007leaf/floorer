@@ -39,6 +39,7 @@
       <span class="chips">
         {{#if hasSurface}}<span class="chip success" data-tooltip="{{localize 'FLOORER.Panel.HasSurface'}}"><i class="fas fa-check"></i></span>{{else}}<span class="chip muted" data-tooltip="{{localize 'FLOORER.Panel.NoSurface'}}"><i class="fas fa-xmark"></i></span>{{/if}}
         {{#if holeCount}}<button type="button" class="chip {{#if expandedHoles}}active{{/if}}" data-action="toggleHoles" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.HoleSummary' holes=holeCount openings=openingCount}}"><i class="fas fa-circle-minus"></i>{{holeCount}}</button>{{/if}}
+        {{#if wallCount}}<span class="chip" data-tooltip="{{localize 'FLOORER.Panel.WallSummary' count=wallCount}}"><i class="fas fa-border-all"></i>{{wallCount}}</span>{{/if}}
         {{#if stairCount}}<button type="button" class="chip {{#if expandedStairs}}active{{/if}}" data-action="toggleStairs" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.StairSummary' count=stairCount links=stairLinks}}"><i class="fas fa-stairs"></i>{{stairCount}}</button>{{/if}}
         {{#if managed}}{{#if sealed}}<button type="button" class="chip info" data-action="toggleSeal" data-level-id="{{id}}" data-sealed="true" data-tooltip="{{localize 'FLOORER.Panel.SealTooltip'}}"><i class="fas fa-lock"></i></button>{{else}}<button type="button" class="chip muted" data-action="toggleSeal" data-level-id="{{id}}" data-sealed="false" data-tooltip="{{localize 'FLOORER.Panel.UnsealTooltip'}}"><i class="fas fa-lock-open"></i></button>{{/if}}{{/if}}
         {{#unless managed}}<button type="button" class="chip dashed" data-action="adopt" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.AdoptHint'}}"><i class="fas fa-hand"></i>{{localize "FLOORER.Panel.Adopt"}}</button><button type="button" class="icon danger" data-action="removeLevel" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.RemoveLevelTip'}}"><i class="fas fa-trash"></i></button>{{/unless}}
@@ -94,6 +95,11 @@
         <button type="button" class="icon" data-action="drawStair" data-tool="polygon" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.StairPolygon'}}"><i class="fas fa-draw-polygon"></i></button>
         <button type="button" class="icon" data-action="drawStair" data-tool="rectangle" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.StairRect'}}"><i class="fas fa-vector-square"></i></button>
         <button type="button" class="icon" data-action="drawStair" data-tool="ellipse" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.StairEllipse'}}"><i class="fas fa-circle"></i></button>
+      </div>
+      <div class="group">
+        <span class="group-label" data-tooltip="{{localize 'FLOORER.Panel.Tip.Walls'}}">{{localize "FLOORER.Panel.Walls"}}</span>
+        <button type="button" class="icon" data-action="buildWalls" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.WallsBuild'}}" {{#unless hasSurface}}disabled{{/unless}}><i class="fas fa-border-all"></i></button>
+        <button type="button" class="icon" data-action="removeWalls" data-level-id="{{id}}" data-tooltip="{{localize 'FLOORER.Panel.Tip.WallsRemove'}}" {{#unless wallCount}}disabled{{/unless}}><i class="fas fa-eraser"></i></button>
       </div>
     </div>
     {{/if}}{{/if}}

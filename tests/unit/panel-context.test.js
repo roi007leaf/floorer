@@ -185,3 +185,10 @@ test("panelContext expands drawn holes only, numbered, with their shapes", () =>
   expect(ctx.rows[0].expandedStairs).toBe(false);
   expect(ctx.rows[0].expandedHoles).toBe(true);
 });
+
+test("panelContext counts outline walls per level", () => {
+  const W = (id, levelId) => ({ id, flags: { floorer: { role: "outlineWall", levelId, managed: true } } });
+  const plan = buildFloorPlan({ levels: [L("f1", 0, 10, ["f1"]), L("f2", 10, 20, ["f2"])], regions: [], walls: [W("w1", "f1"), W("w2", "f1"), W("w3", "f2"), { id: "w4", flags: {} }] });
+  const ctx = panelContext(plan, { activeLevelId: "f1", issues: [], intent: null, journalSize: 0 });
+  expect(ctx.rows.map((r) => r.wallCount)).toEqual([1, 2]);
+});

@@ -13,6 +13,7 @@ import { levelRemovalPlan } from "../model/level-remove.js";
 import { view } from "../canvas/view.js";
 import { isSealed, sealUpdates } from "../model/visibility.js";
 import { getSetting } from "../settings.js";
+import { isOutlineWall, outlineWallsFor } from "../model/walls.js";
 
 function bandLabel(level) {
   const band = bandOf(level);
@@ -133,6 +134,10 @@ function bandInputs(level, editing, draft) {
   return { editingBand: editing, bandBottom: inputValue(band.bottom), bandTop: inputValue(band.top) };
 }
 
+function outlineWalls(scene, levelId) {
+  return Array.from(scene?.walls ?? []).filter((w) => isOutlineWall(w, levelId));
+}
+
 function row(entry, plan, activeLevelId, issues, { editingBandId, bandDraft, expanded }) {
   const holes = entry.surface?.flags?.floorer?.holes ?? [];
   const detail = details(entry, plan, expanded);
@@ -151,6 +156,7 @@ function row(entry, plan, activeLevelId, issues, { editingBandId, bandDraft, exp
     openingCount: holes.filter((h) => h.stairId).length,
     stairCount: entry.stairs.length + entry.arrivingStairs.length,
     stairLinks: stairLinks(entry, plan),
+    wallCount: outlineWalls(plan.scene, entry.level.id).length,
     sealed: isSealed(entry.level),
     targets: targetsFor(entry, plan),
     defaultTargetId: defaultTargetId(entry),
@@ -257,13 +263,30 @@ export async function applyFix(scene, issue, plan) {
   return applyUpdateFix(scene, fix);
 }
 
-export async function wholeSceneSurface(scene, entry, allLevels) {
+export async function wholeSceneSurface(scene, entry, allLevels, { walls = false } = {}) {
   const data = surfaceCreateData(entry.level, allLevels, await footprintShapesForLevel(scene, entry.level));
   await journal.run({ op: "create", collection: "regions", scene }, () => scene.createEmbeddedDocuments("Region", [data]));
+  if (walls) await buildOutlineWalls(scene, findLevel(buildFloorPlan(scene), entry.level.id));
   if (!getSetting(SETTINGS.MIRROR_HOLES)) return;
   const update = tracedHoleMirror(buildFloorPlan(scene), entry.level.id);
   if (update) await applyHoleAdditions(scene, [update]);
   await mirrorHolesFromAbove(scene, entry.level.id);
+}
+
+export async function removeOutlineWalls(scene, entry) {
+  const walls = outlineWalls(scene, entry.level.id);
+  if (!walls.length) return 0;
+  const before = walls.map((w) => w.toObject());
+  await journal.run({ op: "delete", collection: "walls", scene, before }, () => scene.deleteEmbeddedDocuments("Wall", walls.map((w) => w.id)));
+  return walls.length;
+}
+
+export async function buildOutlineWalls(scene, entry) {
+  const data = outlineWallsFor(entry);
+  if (!data) return 0;
+  await removeOutlineWalls(scene, entry);
+  if (data.length) await journal.run({ op: "create", collection: "walls", scene }, () => scene.createEmbeddedDocuments("Wall", data));
+  return data.length;
 }
 
 async function mirrorHolesFromAbove(scene, levelId) {

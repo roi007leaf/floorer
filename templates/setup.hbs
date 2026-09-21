@@ -38,6 +38,10 @@
           <span class="unit-label">{{units}}</span>
         </div>
       </div>
+      <label class="toggle adopt" data-tooltip="{{localize 'FLOORER.Setup.Tip.OutlineWalls'}}">
+        <input type="checkbox" name="outlineWalls" {{#if outlineWalls}}checked{{/if}}>
+        <span>{{localize "FLOORER.Setup.OutlineWalls"}}</span>
+      </label>
       {{#if canAdoptDefault}}
       <label class="toggle adopt" data-tooltip="{{localize 'FLOORER.Setup.Tip.AdoptDefault'}}">
         <input type="checkbox" name="adoptDefault" checked>
