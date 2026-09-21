@@ -8,7 +8,7 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, renameLevel, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -42,6 +42,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       undo: FloorerPanel.#onUndo,
       revert: FloorerPanel.#onRevert,
       adopt: FloorerPanel.#onAdopt,
+      removeLevel: FloorerPanel.#onRemoveLevel,
       cancelIntent: FloorerPanel.#onCancelIntent,
       rename: FloorerPanel.#onRename,
       editBand: FloorerPanel.#onEditBand,
@@ -331,6 +332,12 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onAdopt(_event, target) {
     const entry = this.#entry(target.dataset.levelId);
     if (entry) await adoptLevel(canvas.scene, entry.level);
+    this.render();
+  }
+
+  static async #onRemoveLevel(_event, target) {
+    const entry = this.#entry(target.dataset.levelId);
+    if (entry) await removeLevel(canvas.scene, this.plan, entry.level.id);
     this.render();
   }
 

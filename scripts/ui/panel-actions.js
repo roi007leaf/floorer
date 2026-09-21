@@ -7,6 +7,7 @@ import { bandOf, findLevel } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
 import { holeRemovalUpdates, stairRemovalUpdates } from "../model/holes.js";
+import { levelRemovalPlan } from "../model/level-remove.js";
 import { view } from "../canvas/view.js";
 import { isSealed, sealUpdates } from "../model/visibility.js";
 
@@ -250,6 +251,34 @@ export async function renameLevel(scene, level, name) {
   if (!name || name === level.name) return;
   const before = [{ _id: level.id, name: level.name }];
   await journal.run({ op: "update", collection: "levels", scene, before }, () => scene.updateEmbeddedDocuments("Level", [{ _id: level.id, name }]));
+}
+
+async function removeLevelTokens(scene, tokens) {
+  if (!tokens.length) return;
+  const updates = tokens.map(({ _id, level, elevation }) => ({ _id, level, elevation }));
+  const before = tokens.map(({ _id }) => {
+    const token = scene.tokens.get(_id);
+    return { _id, level: token.level, elevation: token.elevation };
+  });
+  await runUpdates(scene, "tokens", updates, before);
+}
+
+export async function removeLevel(scene, plan, levelId) {
+  const entry = findLevel(plan, levelId);
+  if (!entry) return;
+  const removal = levelRemovalPlan(plan, levelId);
+  if (!removal) return ui.notifications.warn(game.i18n.localize("FLOORER.Panel.CannotRemoveOnlyLevel"));
+  const { DialogV2 } = foundry.applications.api;
+  const ok = await DialogV2.confirm({
+    window: { title: "FLOORER.Panel.RemoveLevelTitle" },
+    content: `<p>${game.i18n.format("FLOORER.Panel.ConfirmRemoveLevel", { name: entry.level.name })}</p>`,
+    rejectClose: false,
+  });
+  if (!ok) return;
+  await removeLevelTokens(scene, removal.tokens);
+  if (scene.initialLevel?.id === levelId) await scene.update({ initialLevel: removal.fallbackId });
+  const before = [entry.level.toObject()];
+  await journal.run({ op: "delete", collection: "levels", scene, before }, () => scene.deleteEmbeddedDocuments("Level", [levelId]));
 }
 
 export function armDraw(kind, levelId, tool, targetLevelId) {
