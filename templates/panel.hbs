@@ -5,8 +5,7 @@
     <button type="button" class="icon" data-action="setup" data-tooltip="{{localize 'FLOORER.Panel.Setup'}}"><i class="fas fa-layer-group"></i></button>
     {{#if dimmingActive}}
     <span class="chip muted" data-tooltip="{{localize 'FLOORER.Panel.DimmingTip'}}">
-      <i class="fas fa-eye-low-vision"></i>{{localize "FLOORER.Panel.Dimming"}}
-      {{#if dimmingCount}}<span class="count" data-tooltip="{{localize 'FLOORER.Panel.DimmingCount' count=dimmingCount}}">{{dimmingCount}}</span>{{/if}}
+      <i class="fas fa-eye-low-vision"></i>{{#if dimmingCount}}{{localize "FLOORER.Panel.Dimming" count=dimmingCount}}{{else}}{{localize "FLOORER.Panel.DimmingNone"}}{{/if}}
     </span>
     {{/if}}
     <button type="button" class="icon" data-action="undo" data-tooltip="{{localize 'FLOORER.Panel.Undo'}}" {{#unless journalSize}}disabled{{/unless}}><i class="fas fa-undo"></i></button>
