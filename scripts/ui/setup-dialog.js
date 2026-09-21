@@ -63,7 +63,7 @@ function imageItem(row, value) {
   browse.type = "button";
   browse.dataset.action = "browse";
   browse.dataset.key = row.key;
-  browse.title = game.i18n.localize("FLOORER.Setup.Browse");
+  browse.setAttribute("data-tooltip", game.i18n.localize("FLOORER.Setup.Browse"));
   browse.append(el("i", "fas fa-file-image"));
   li.append(el("label", null, row.name), input, browse);
   return li;

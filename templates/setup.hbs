@@ -4,17 +4,17 @@
       <div class="field">
         <label for="{{id}}-floorsAbove">{{localize "FLOORER.Setup.FloorsAbove"}}</label>
         <div class="stepper">
-          <button type="button" class="icon" data-action="step" data-field="floorsAbove" data-delta="-1" title="{{localize 'FLOORER.Setup.Fewer'}}"><i class="fas fa-minus"></i></button>
+          <button type="button" class="icon" data-action="step" data-field="floorsAbove" data-delta="-1" data-tooltip="{{localize 'FLOORER.Setup.Fewer'}}"><i class="fas fa-minus"></i></button>
           <input type="number" id="{{id}}-floorsAbove" name="floorsAbove" min="0" step="1" value="{{floorsAbove}}">
-          <button type="button" class="icon" data-action="step" data-field="floorsAbove" data-delta="1" title="{{localize 'FLOORER.Setup.More'}}"><i class="fas fa-plus"></i></button>
+          <button type="button" class="icon" data-action="step" data-field="floorsAbove" data-delta="1" data-tooltip="{{localize 'FLOORER.Setup.More'}}"><i class="fas fa-plus"></i></button>
         </div>
       </div>
       <div class="field">
         <label for="{{id}}-basements">{{localize "FLOORER.Setup.Basements"}}</label>
         <div class="stepper">
-          <button type="button" class="icon" data-action="step" data-field="basements" data-delta="-1" title="{{localize 'FLOORER.Setup.Fewer'}}"><i class="fas fa-minus"></i></button>
+          <button type="button" class="icon" data-action="step" data-field="basements" data-delta="-1" data-tooltip="{{localize 'FLOORER.Setup.Fewer'}}"><i class="fas fa-minus"></i></button>
           <input type="number" id="{{id}}-basements" name="basements" min="0" step="1" value="{{basements}}">
-          <button type="button" class="icon" data-action="step" data-field="basements" data-delta="1" title="{{localize 'FLOORER.Setup.More'}}"><i class="fas fa-plus"></i></button>
+          <button type="button" class="icon" data-action="step" data-field="basements" data-delta="1" data-tooltip="{{localize 'FLOORER.Setup.More'}}"><i class="fas fa-plus"></i></button>
         </div>
       </div>
       <div class="field">
@@ -63,7 +63,7 @@
       <li data-key="{{key}}">
         <label>{{name}}</label>
         <input type="text" name="image-{{key}}" placeholder="{{localize 'FLOORER.Setup.ImagePlaceholder'}}">
-        <button type="button" class="icon" data-action="browse" data-key="{{key}}" title="{{localize 'FLOORER.Setup.Browse'}}"><i class="fas fa-file-image"></i></button>
+        <button type="button" class="icon" data-action="browse" data-key="{{key}}" data-tooltip="{{localize 'FLOORER.Setup.Browse'}}"><i class="fas fa-file-image"></i></button>
       </li>
       {{/each}}
     </ul>
