@@ -13,10 +13,10 @@ function existingHoles(surface) {
   return foundry.utils.deepClone(surface.flags?.floorer?.holes ?? []);
 }
 
-export function holeAppendData(surface, shapes, { mirrorOf } = {}) {
+export function holeAppendData(surface, shapes, { mirrorOf, extra } = {}) {
   const added = toHoleShapes(shapes);
   const ids = added.map(() => foundry.utils.randomID());
-  const holes = ids.map((id, i) => (mirrorOf ? { id, mirrorOf: mirrorOf[i] } : { id }));
+  const holes = ids.map((id, i) => ({ id, ...(mirrorOf ? { mirrorOf: mirrorOf[i] } : {}), ...extra }));
   return {
     _id: surface.id,
     shapes: [...surface.shapes.map(plainShape), ...added],

@@ -5,6 +5,7 @@ import { hasSoleDefaultLevel, imagesFromValues, limitImages, previewRows } from 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
 const COUNT_FIELDS = ["floorsAbove", "basements"];
+const MANY_LEVELS = 4;
 const WATCHED = ["floorsAbove", "basements", "roof", "floorHeight", "groundBottom"];
 
 function readOptions(form) {
@@ -46,7 +47,7 @@ function el(tag, className, text) {
 function previewItem(row) {
   const li = el("li");
   li.dataset.key = row.key;
-  li.append(el("span", "name", row.name), el("span", "band", row.band));
+  li.append(el("span", "rail", row.band), el("span", "name", row.name));
   return li;
 }
 
@@ -90,7 +91,7 @@ export class SetupDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     classes: ["floorer", "floorer-setup"],
     tag: "form",
     window: { title: "FLOORER.Setup.Title", resizable: false },
-    position: { width: 560 },
+    position: { width: 580 },
     form: { handler: SetupDialog.#onSubmit, closeOnSubmit: false },
     actions: { browse: SetupDialog.#onBrowse, step: SetupDialog.#onStep, cancel: SetupDialog.#onCancel },
   };
@@ -101,11 +102,13 @@ export class SetupDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = canvas.scene;
     const grid = scene?.grid?.distance ?? 5;
     const opts = { floorsAbove: 2, basements: 0, roof: true, floorHeight: grid * 2, groundBottom: 0 };
+    const rows = previewRows(opts);
     return {
       ...opts,
       id: this.id,
       units: scene?.grid?.units || game.i18n.localize("FLOORER.Setup.Units"),
-      rows: previewRows(opts),
+      rows,
+      manyLevels: rows.length >= MANY_LEVELS,
       canAdoptDefault: hasSoleDefaultLevel(scene),
     };
   }
@@ -127,6 +130,7 @@ export class SetupDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const values = imageValues(this.element);
     const list = this.element.querySelector(".image-rows");
     list.replaceChildren(...rows.map((row) => imageItem(row, values[row.key])));
+    list.classList.toggle("two-col", rows.length >= MANY_LEVELS);
     this.#showError(null);
   }
 

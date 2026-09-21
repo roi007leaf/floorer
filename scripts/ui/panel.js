@@ -22,7 +22,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     id: `${MODULE_ID}-panel`,
     classes: ["floorer", "floorer-panel"],
     window: { title: "FLOORER.Title", resizable: true, minimizable: true },
-    position: { width: 380, height: "auto" },
+    position: { width: 520, height: "auto" },
     actions: {
       setup: FloorerPanel.#onSetup,
       activate: FloorerPanel.#onActivate,

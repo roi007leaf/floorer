@@ -42,16 +42,20 @@ export function orderPair(a, b) {
 }
 
 function emptyFloorLevel(level) {
-  return { level, surface: null, stairs: [], managed: isManaged(level), below: null, above: null };
+  return { level, surface: null, stairs: [], arrivingStairs: [], managed: isManaged(level), below: null, above: null };
 }
 
 function attachRegions(byLevel, regions) {
   for (const region of regions) {
     const flag = floorerFlag(region);
-    const entry = flag && byLevel.get(flag.levelId);
-    if (!entry) continue;
-    if (flag.role === ROLES.SURFACE) entry.surface = region;
-    else if (flag.role === ROLES.STAIR) entry.stairs.push(region);
+    if (!flag) continue;
+    const entry = byLevel.get(flag.levelId);
+    if (flag.role === ROLES.SURFACE) {
+      if (entry) entry.surface = region;
+    } else if (flag.role === ROLES.STAIR) {
+      if (entry) entry.stairs.push(region);
+      byLevel.get(flag.targetLevelId)?.arrivingStairs.push(region);
+    }
   }
 }
 

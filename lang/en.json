@@ -65,6 +65,8 @@
       "Stairs": "Stairs",
       "Stair": "Stair",
       "StairTarget": "Stair target level",
+      "StairLinks": "Stairs: {levels}",
+      "StairOpenings": "{count} openings",
       "Sealed": "Sealed (sees only itself)",
       "Footprint": "Footprint",
       "DrawPolygon": "Draw footprint polygon",
@@ -77,7 +79,7 @@
       "FixAll": "Fix all",
       "Fix": "Fix",
       "NoIssues": "No issues",
-      "IssueCount": "{count} issues need attention",
+      "IssueCount": "{count} issues",
       "Undo": "Undo",
       "Revert": "Revert session",
       "RevertTitle": "Revert Floorer session",
@@ -88,14 +90,15 @@
       "NoScene": "Open a scene before using Floorer."
     },
     "Issue": {
-      "surface-missing": "Level has no floor surface.",
-      "surface-levels": "Surface is not tagged to every level that can see it (floor will look transparent).",
-      "surface-band": "Surface elevation does not match its level band.",
-      "hole-unmirrored": "Hole is not cut into the ceiling of the level below.",
-      "stair-levels": "Stair is not tagged to both connected levels (one-way stair).",
-      "stair-band": "Stair is not in the lower level's elevation band.",
-      "stair-target-missing": "Stair target level no longer exists.",
-      "level-overlap": "Two managed levels overlap in elevation."
+      "surface-missing": "No floor surface",
+      "surface-levels": "Surface not visible from every level",
+      "surface-band": "Surface elevation off band",
+      "hole-unmirrored": "Hole not mirrored below",
+      "stair-levels": "One-way stair",
+      "stair-band": "Stair outside lower band",
+      "stair-target-missing": "Stair target missing",
+      "level-overlap": "Overlaps another level",
+      "level-overlap-with": "Overlaps {levels}"
     },
     "Common": {
       "Cancel": "Cancel"

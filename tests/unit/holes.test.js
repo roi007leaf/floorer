@@ -56,3 +56,14 @@ test("holeUpdates writes own then mirror with mirrorOf", () => {
 test("holeUpdates empty without own surface", () => {
   expect(holeUpdates(FL("f1", null), [rect], "hole")).toEqual([]);
 });
+
+test("holeAppendData merges extra fields into each hole entry", () => {
+  const s = S("f1");
+  const upd = holeAppendData(s, [rect, rect], { mirrorOf: ["a", "b"], extra: { stairId: "st" } });
+  expect(upd["flags.floorer.holes"]).toEqual([
+    { id: upd.ids[0], mirrorOf: "a", stairId: "st" },
+    { id: upd.ids[1], mirrorOf: "b", stairId: "st" },
+  ]);
+  expect(holeAppendData(s, [rect], { extra: { stairId: "st" } })["flags.floorer.holes"][0]).toMatchObject({ stairId: "st" });
+  expect(holeAppendData(s, [rect], {})["flags.floorer.holes"][0]).toEqual({ id: expect.any(String) });
+});

@@ -16,6 +16,9 @@ test("buildFloorPlan sorts and groups", () => {
   expect(plan.levels.map((l) => l.level.id)).toEqual(["b", "f1", "f2"]);
   expect(plan.levels[1].surface.id).toBe("s1");
   expect(plan.levels[1].stairs.map((s) => s.id)).toEqual(["st"]);
+  expect(plan.levels[1].arrivingStairs).toEqual([]);
+  expect(plan.levels[2].stairs).toEqual([]);
+  expect(plan.levels[2].arrivingStairs.map((s) => s.id)).toEqual(["st"]);
   expect(plan.levels[0].surface).toBeNull();
   expect(plan.levels[1].below.level.id).toBe("b");
   expect(plan.levels[1].above.level.id).toBe("f2");
@@ -78,4 +81,11 @@ test("bandOf normalises live and plain levels", () => {
 test("buildFloorPlan tolerates a null scene", () => {
   expect(buildFloorPlan(null)).toEqual({ scene: null, levels: [] });
   expect(buildFloorPlan({})).toEqual({ scene: {}, levels: [] });
+});
+
+test("buildFloorPlan lists arriving stairs even when the owner level is gone", () => {
+  const scene = { levels: [L("f2", 10, 20)], regions: [R("st", "stair", "gone", { targetLevelId: "f2" })] };
+  const plan = buildFloorPlan(scene);
+  expect(plan.levels[0].stairs).toEqual([]);
+  expect(plan.levels[0].arrivingStairs.map((s) => s.id)).toEqual(["st"]);
 });

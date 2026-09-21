@@ -26,7 +26,26 @@ function targetsFor(entry, plan) {
     .reverse();
 }
 
+function aggregateIssues(plan, issues) {
+  const overlaps = issues.filter((i) => i.id === "level-overlap");
+  if (overlaps.length === 0) return issues;
+  const levels = overlaps.map((i) => findLevel(plan, i.docId)?.level.name ?? i.docId).join(", ");
+  const merged = { ...overlaps[0], label: "FLOORER.Issue.level-overlap-with", levels };
+  return issues.filter((i) => i.id !== "level-overlap").concat(merged);
+}
+
+function levelNameOf(plan, id) {
+  return findLevel(plan, id)?.level.name ?? id;
+}
+
+function stairLinks(entry, plan) {
+  const owned = entry.stairs.map((s) => s.flags?.floorer?.targetLevelId);
+  const arriving = entry.arrivingStairs.map((s) => s.flags?.floorer?.levelId);
+  return [...owned, ...arriving].map((id) => `\u2194 ${levelNameOf(plan, id)}`).join(", ");
+}
+
 function row(entry, plan, activeLevelId, issues) {
+  const holes = entry.surface?.flags?.floorer?.holes ?? [];
   return {
     id: entry.level.id,
     name: entry.level.name,
@@ -34,12 +53,14 @@ function row(entry, plan, activeLevelId, issues) {
     active: entry.level.id === activeLevelId,
     managed: entry.managed,
     hasSurface: !!entry.surface,
-    holeCount: entry.surface?.flags?.floorer?.holes?.length ?? 0,
-    stairCount: entry.stairs.length,
+    holeCount: holes.filter((h) => !h.stairId).length,
+    openingCount: holes.filter((h) => h.stairId).length,
+    stairCount: entry.stairs.length + entry.arrivingStairs.length,
+    stairLinks: stairLinks(entry, plan),
     sealed: isSealed(entry),
     targets: targetsFor(entry, plan),
     defaultTargetId: defaultTargetId(entry),
-    issues: issues.filter((i) => i.levelId === entry.level.id),
+    issues: aggregateIssues(plan, issues.filter((i) => i.levelId === entry.level.id)),
   };
 }
 

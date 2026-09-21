@@ -46,19 +46,19 @@
       {{/if}}
     </div>
     <div class="column preview">
-      <span class="column-title">{{localize "FLOORER.Setup.Preview"}}</span>
+      <span class="caption">{{localize "FLOORER.Setup.Preview"}}</span>
       <ul class="band-preview">
         {{#each rows}}
-        <li data-key="{{key}}"><span class="name">{{name}}</span><span class="band">{{band}}</span></li>
+        <li data-key="{{key}}"><span class="rail">{{band}}</span><span class="name">{{name}}</span></li>
         {{/each}}
       </ul>
     </div>
   </div>
 
   <div class="images">
-    <span class="column-title">{{localize "FLOORER.Setup.Images"}}</span>
+    <span class="caption">{{localize "FLOORER.Setup.Images"}}</span>
     <p class="hint">{{localize "FLOORER.Setup.ImagesHint"}}</p>
-    <ul class="image-rows">
+    <ul class="image-rows {{#if manyLevels}}two-col{{/if}}">
       {{#each rows}}
       <li data-key="{{key}}">
         <label>{{name}}</label>
@@ -73,6 +73,6 @@
 
   <footer class="form-footer">
     <button type="button" data-action="cancel">{{localize "FLOORER.Common.Cancel"}}</button>
-    <button type="submit" class="bright"><i class="fas fa-layer-group"></i> {{localize "FLOORER.Setup.Submit"}}</button>
+    <button type="submit" class="primary"><i class="fas fa-layer-group"></i>{{localize "FLOORER.Setup.Submit"}}</button>
   </footer>
 </div>
