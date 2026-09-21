@@ -433,7 +433,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static #onDrawWalls() {
-    canvas.walls?.activate({ tool: "walls" });
+    canvas.walls?.activate({ tool: "wall" });
   }
 
   static async #onDeleteHole(_event, target) {
