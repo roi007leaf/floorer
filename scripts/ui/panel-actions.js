@@ -47,12 +47,7 @@ function dedupeStairLinks(ids, plan) {
     grouped.get(key).count++;
   }
   return Array.from(grouped.values())
-    .map(({ level, count }) => {
-      const band = bandOf(level);
-      const bandStr = `${band.bottom ?? "-\u221e"}\u2013${band.top ?? "\u221e"}`;
-      const countStr = count > 1 ? ` \u00d7${count}` : "";
-      return `\u2194 ${level.name} (${bandStr})${countStr}`;
-    })
+    .map(({ level, count }) => `\u2194 ${level.name}${count > 1 ? ` \u00d7${count}` : ""}`)
     .join(", ");
 }
 

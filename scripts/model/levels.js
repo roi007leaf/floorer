@@ -14,14 +14,9 @@ export function bandsFor({ floorsAbove, basements, roof, floorHeight, groundBott
   return bands;
 }
 
-function prefix(band) {
+export function levelName(band) {
   if (band.kind === "roof") return "Roof";
   return `${band.kind === "basement" ? "B" : "L"}${band.index}`;
-}
-
-export function levelName(band) {
-  const top = band.top === null ? "∞" : band.top;
-  return `${prefix(band)} (${band.bottom}|${top})`;
 }
 
 function levelFlags(kind) {

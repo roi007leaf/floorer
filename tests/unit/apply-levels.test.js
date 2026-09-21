@@ -13,7 +13,7 @@ test("fresh scene creates all", () => {
 test("matching band reused, managed mismatch conflicts, unmanaged ignored", () => {
   const scene = { levels: [L("x", 0, 10, true), L("y", 50, 60, true), L("z", 70, 80)] };
   const out = planLevelChanges(scene, opts);
-  expect(out.create.map((c) => c.name)).toEqual(["L2 (10|20)"]);
+  expect(out.create.map((c) => c.name)).toEqual(["L2"]);
   expect(out.reuse[0].existing.id).toBe("x");
   expect(out.reuse[0].data.background.src).toBe("a.webp");
   expect(out.conflicts.map((c) => c.id)).toEqual(["y"]);
@@ -38,10 +38,10 @@ const defaultLevel = () => ({ id: "defaultLevel0000", _id: "defaultLevel0000", n
 
 test("sole unmanaged default level is adopted as the ground floor", () => {
   const out = planLevelChanges({ levels: [defaultLevel()] }, opts);
-  expect(out.create.map((c) => c.name)).toEqual(["L2 (10|20)"]);
+  expect(out.create.map((c) => c.name)).toEqual(["L2"]);
   expect(out.reuse).toHaveLength(1);
   expect(out.reuse[0].existing.id).toBe("defaultLevel0000");
-  expect(out.reuse[0].data.name).toBe("L1 (0|10)");
+  expect(out.reuse[0].data.name).toBe("L1");
   expect(out.reuse[0].data.flags.floorer.adoptedDefault).toBe(true);
   expect(out.conflicts).toEqual([]);
 });
@@ -55,7 +55,7 @@ test("live default level with Infinity top is adopted too", () => {
 test("default level adopts the first band when there is no ground floor", () => {
   const out = planLevelChanges({ levels: [defaultLevel()] }, { ...opts, floorsAbove: 0, basements: 1, images: [] });
   expect(out.create).toEqual([]);
-  expect(out.reuse[0].data.name).toBe("B1 (-10|0)");
+  expect(out.reuse[0].data.name).toBe("B1");
 });
 
 test("adoption is skipped when adoptDefault is false or other levels exist", () => {
@@ -68,11 +68,11 @@ test("adoption is skipped when adoptDefault is false or other levels exist", () 
 });
 
 test("reuseUpdate writes name and elevation only for an adopted default", () => {
-  const plain = reuseUpdate({ existing: L("x", 0, 10, true), data: { name: "L1 (0|10)", elevation: { bottom: 0, top: 10 }, sort: 0, flags: { floorer: { role: "level", kind: "floor", managed: true, v: 1 } }, background: { src: "a.webp" } } });
+  const plain = reuseUpdate({ existing: L("x", 0, 10, true), data: { name: "L1", elevation: { bottom: 0, top: 10 }, sort: 0, flags: { floorer: { role: "level", kind: "floor", managed: true, v: 1 } }, background: { src: "a.webp" } } });
   expect(plain).toEqual({ _id: "x", flags: { floorer: { role: "level", kind: "floor", managed: true, v: 1 } }, sort: 0, background: { src: "a.webp" } });
   const adopted = planLevelChanges({ levels: [defaultLevel()] }, opts).reuse[0];
   const upd = reuseUpdate(adopted);
-  expect(upd.name).toBe("L1 (0|10)");
+  expect(upd.name).toBe("L1");
   expect(upd.elevation).toEqual({ bottom: 0, top: 10 });
   expect(upd.background).toEqual({ src: "a.webp" });
 });

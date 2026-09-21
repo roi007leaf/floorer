@@ -21,9 +21,9 @@ test("bandsFor two basements count down", () => {
 });
 
 test("levelName formats", () => {
-  expect(levelName({ kind: "floor", index: 2, bottom: 10, top: 20 })).toBe("L2 (10|20)");
-  expect(levelName({ kind: "basement", index: 1, bottom: -10, top: 0 })).toBe("B1 (-10|0)");
-  expect(levelName({ kind: "roof", index: 0, bottom: 20, top: null })).toBe("Roof (20|∞)");
+  expect(levelName({ kind: "floor", index: 2, bottom: 10, top: 20 })).toBe("L2");
+  expect(levelName({ kind: "basement", index: 1, bottom: -10, top: 0 })).toBe("B1");
+  expect(levelName({ kind: "roof", index: 0, bottom: 20, top: null })).toBe("Roof");
 });
 
 test("generateLevelData assigns images bottom→top and flags", () => {
@@ -32,7 +32,7 @@ test("generateLevelData assigns images bottom→top and flags", () => {
   expect(data[0].background.src).toBe("b1.webp");
   expect(data[3].background).toBeUndefined();
   expect(data[1]).toMatchObject({
-    name: "L1 (0|10)",
+    name: "L1",
     elevation: { bottom: 0, top: 10 },
     sort: 1,
     flags: { floorer: { role: "level", kind: "floor", managed: true, v: 1 } },

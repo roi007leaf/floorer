@@ -5,7 +5,7 @@ const opts = { floorsAbove: 2, basements: 1, roof: true, floorHeight: 10, ground
 test("previewRows lists levels top to bottom with band labels", () => {
   const rows = previewRows(opts);
   expect(rows.map((r) => r.key)).toEqual(["roof", "f2", "f1", "b1"]);
-  expect(rows.map((r) => r.name)).toEqual(["Roof (20|∞)", "L2 (10|20)", "L1 (0|10)", "B1 (-10|0)"]);
+  expect(rows.map((r) => r.name)).toEqual(["Roof", "L2", "L1", "B1"]);
   expect(rows.map((r) => r.band)).toEqual(["20–∞", "10–20", "0–10", "-10–0"]);
 });
 
