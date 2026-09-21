@@ -1,25 +1,51 @@
 import { isolation } from "../../scripts/canvas/isolation.js";
 import { view } from "../../scripts/canvas/view.js";
 
-test("alphaFor", () => {
-  expect(isolation.alphaFor({ levels: new Set() }, "a")).toBeNull();
-  expect(isolation.alphaFor({}, "a")).toBeNull();
-  expect(isolation.alphaFor({ levels: new Set(["a", "b"]) }, "a")).toBeNull();
-  expect(isolation.alphaFor({ levels: new Set(["b"]) }, "a")).toBe(0.25);
+const f1 = { id: "f1", elevation: { bottom: 0, top: 10 } };
+const roof = { id: "r", elevation: { bottom: 20, top: Infinity } };
+
+test("alphaFor dims docs whose floorer home is another level", () => {
+  expect(isolation.alphaFor({ flags: { floorer: { levelId: "f2" } } }, f1)).toBe(0.25);
+  expect(isolation.alphaFor({ flags: { floorer: { levelId: "f1" } } }, f1)).toBeNull();
+});
+
+test("alphaFor dims regions whose bottom lies outside the active band", () => {
+  expect(isolation.alphaFor({ elevation: { bottom: 10, top: 20 } }, f1)).toBe(0.25);
+  expect(isolation.alphaFor({ elevation: { bottom: -10, top: 0 } }, f1)).toBe(0.25);
+  expect(isolation.alphaFor({ elevation: { bottom: 0, top: 10 } }, f1)).toBeNull();
+  expect(isolation.alphaFor({ elevation: { bottom: 5, top: 7 } }, f1)).toBeNull();
+  expect(isolation.alphaFor({ elevation: { bottom: -Infinity, top: Infinity } }, f1)).toBeNull();
+  expect(isolation.alphaFor({ elevation: { bottom: 100, top: Infinity } }, roof)).toBeNull();
+  expect(isolation.alphaFor({ elevation: { bottom: 5, top: 10 } }, roof)).toBe(0.25);
+});
+
+test("alphaFor dims numeric-elevation docs outside the active band", () => {
+  expect(isolation.alphaFor({ elevation: 15 }, f1)).toBe(0.25);
+  expect(isolation.alphaFor({ elevation: 10 }, f1)).toBe(0.25);
+  expect(isolation.alphaFor({ elevation: 0 }, f1)).toBeNull();
+  expect(isolation.alphaFor({ elevation: 9 }, f1)).toBeNull();
+  expect(isolation.alphaFor({ elevation: 30 }, roof)).toBeNull();
+});
+
+test("alphaFor leaves walls and untyped docs alone", () => {
+  expect(isolation.alphaFor({ levels: new Set(["f2"]) }, f1)).toBeNull();
+  expect(isolation.alphaFor({}, f1)).toBeNull();
+  expect(isolation.alphaFor({ flags: {} }, null)).toBeNull();
 });
 
 test("onRefresh dims only when active and enabled", () => {
-  canvas.level = { id: "a" };
+  canvas.level = { id: "f1" };
+  canvas.scene = { levels: { get: (id) => (id === "f1" ? f1 : null) } };
   view.sync();
   game.settings.set("floorer", "isolation", true);
-  const p = { document: { levels: new Set(["b"]) }, alpha: 1 };
+  const p = { document: { elevation: 15 }, alpha: 1 };
   isolation.setActive(false);
   isolation.onRefresh(p);
   expect(p.alpha).toBe(1);
   isolation.setActive(true);
   isolation.onRefresh(p);
   expect(p.alpha).toBe(0.25);
-  p.document.levels = new Set(["a"]);
+  p.document.elevation = 5;
   isolation.onRefresh(p);
   expect(p.alpha).toBe(1);
 });

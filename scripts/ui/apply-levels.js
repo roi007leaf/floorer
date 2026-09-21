@@ -14,14 +14,29 @@ export function parseImages(raw) {
   return lines;
 }
 
+function adoptableDefault(existing, opts) {
+  if (opts.adoptDefault === false || existing.length !== 1 || isManaged(existing[0])) return null;
+  return sameBand(existing[0].elevation, { bottom: 0, top: null }) ? existing[0] : null;
+}
+
+function groundData(generated, opts) {
+  return generated.find((d) => d.elevation.bottom === opts.groundBottom) ?? generated[0];
+}
+
+function adoptedData(data) {
+  return { ...data, flags: { floorer: { ...data.flags.floorer, adoptedDefault: true } } };
+}
+
 export function planLevelChanges(scene, opts) {
   const existing = Array.from(scene.levels ?? []);
   const generated = generateLevelData(opts);
   const reuse = [];
   const create = [];
+  const adoptee = adoptableDefault(existing, opts);
+  const ground = adoptee && generated.length ? groundData(generated, opts) : null;
   for (const data of generated) {
-    const match = existing.find((l) => sameBand(l.elevation, data.elevation));
-    if (match) reuse.push({ existing: match, data });
+    const match = data === ground ? adoptee : existing.find((l) => sameBand(l.elevation, data.elevation));
+    if (match) reuse.push({ existing: match, data: data === ground ? adoptedData(data) : data });
     else create.push(data);
   }
   const reused = new Set(reuse.map((r) => r.existing));
@@ -29,9 +44,10 @@ export function planLevelChanges(scene, opts) {
   return { create, reuse, conflicts };
 }
 
-function reuseUpdate({ existing, data }) {
+export function reuseUpdate({ existing, data }) {
   const upd = { _id: existing.id, flags: data.flags, sort: data.sort };
   if (data.background?.src) upd.background = { src: data.background.src };
+  if (data.flags?.floorer?.adoptedDefault === true) Object.assign(upd, { name: data.name, elevation: data.elevation });
   return upd;
 }
 
@@ -52,7 +68,7 @@ async function createLevels(scene, create) {
 
 async function updateReused(scene, reuse) {
   if (!reuse.length) return;
-  const before = reuse.map((r) => ({ _id: r.existing.id, flags: foundry.utils.deepClone(r.existing.flags ?? {}), sort: r.existing.sort, background: foundry.utils.deepClone(r.existing.background ?? {}) }));
+  const before = reuse.map((r) => ({ _id: r.existing.id, name: r.existing.name, elevation: foundry.utils.deepClone(levelSource(r.existing).elevation ?? {}), flags: foundry.utils.deepClone(r.existing.flags ?? {}), sort: r.existing.sort, background: foundry.utils.deepClone(r.existing.background ?? {}) }));
   await journal.run({ op: "update", collection: "levels", scene, before }, () => scene.updateEmbeddedDocuments("Level", reuse.map(reuseUpdate)));
 }
 

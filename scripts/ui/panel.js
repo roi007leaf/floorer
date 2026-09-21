@@ -145,8 +145,12 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onFixAll() {
-    const plan = this.plan;
-    for (const issue of lint(plan).filter((i) => i.fix && !i.fix.intent && !i.fix.prompt)) await applyFix(canvas.scene, issue, plan);
+    for (let i = 0; i < 20; i++) {
+      const plan = this.plan;
+      const issue = lint(plan).find((it) => it.fix && !it.fix.intent && !it.fix.prompt);
+      if (!issue) break;
+      await applyFix(canvas.scene, issue, plan);
+    }
   }
 
   static async #onUndo() {

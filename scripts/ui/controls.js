@@ -3,22 +3,15 @@ import { FloorerPanel } from "./panel.js";
 
 export function registerControls(controls) {
   if (!game.user?.isGM) return;
-  controls[MODULE_ID] = {
+  const tools = controls.regions?.tools;
+  if (!tools) return;
+  tools[MODULE_ID] = {
     name: MODULE_ID,
-    title: "FLOORER.Title",
+    title: "FLOORER.Controls.Open",
     icon: "fas fa-layer-group",
+    button: true,
     order: 100,
-    visible: true,
-    onChange: () => {},
-    tools: {
-      open: {
-        name: "open",
-        title: "FLOORER.Controls.Open",
-        icon: "fas fa-layer-group",
-        button: true,
-        onChange: () => FloorerPanel.toggle(),
-      },
-    },
-    activeTool: "open",
+    visible: game.user.isGM,
+    onChange: () => FloorerPanel.toggle(),
   };
 }

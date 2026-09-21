@@ -36,6 +36,15 @@ function armedToolActive(intent) {
   return ui.controls?.control?.name === "regions" && ui.controls?.tool?.name === intent.tool;
 }
 
+function stairHoleUpdates(targets, lower, shapes) {
+  const upper = targets.find((t) => t !== lower);
+  const own = targets.find((t) => t === lower);
+  if (!upper) return own ? [holeAppendData(own.surface, shapes, {})] : [];
+  const upperUpdate = holeAppendData(upper.surface, shapes, {});
+  if (!own) return [upperUpdate];
+  return [upperUpdate, holeAppendData(own.surface, shapes, { mirrorOf: upperUpdate.ids })];
+}
+
 class Intents {
   #current = null;
   #arming = false;
@@ -128,9 +137,8 @@ class Intents {
     const plan = buildFloorPlan(canvas.scene);
     const lower = findLevel(plan, flag.levelId);
     if (!lower) return;
-    const targets = mirrorTargets(lower, INTENTS.STAIR);
-    const updates = targets.map((t) => holeAppendData(t.surface, Array.from(document.shapes), {}));
-    await applyHoleUpdates(canvas.scene, updates);
+    const shapes = Array.from(document.shapes);
+    await applyHoleUpdates(canvas.scene, stairHoleUpdates(mirrorTargets(lower, INTENTS.STAIR), lower, shapes));
   }
 }
 

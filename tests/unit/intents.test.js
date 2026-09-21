@@ -1,5 +1,7 @@
 import { intents } from "../../scripts/canvas/intents.js";
 import { journal } from "../../scripts/journal/journal.js";
+import { lint } from "../../scripts/model/issues.js";
+import { buildFloorPlan } from "../../scripts/model/floor-plan.js";
 
 const rect = { type: "rectangle", x: 0, y: 0, width: 10, height: 10, rotation: 0, hole: false };
 const L = (id, bottom, top, vis) => ({ id, _id: id, name: id, elevation: { bottom, top }, visibility: { levels: new Set(vis) }, flags: { floorer: { role: "level", managed: true } } });
@@ -143,6 +145,38 @@ test("stair adoption uses lower band and mirrors on create", async () => {
   await intents.onCreateRegion(created, {}, "gm1");
   const updates = s.updateEmbeddedDocuments.mock.calls[0][1];
   expect(updates.map((u) => u._id).sort()).toEqual(["s1", "s2"]);
+});
+
+test("stair mirror links the lower hole to the upper hole so lint is clean", async () => {
+  const f1 = L("f1", 0, 10, ["f1", "f2"]);
+  const f2 = L("f2", 10, 20, ["f1", "f2"]);
+  const s1 = { ...S("s1", "f1"), levels: new Set(["f1", "f2"]), elevation: { bottom: 0, top: 10, topInclusive: true } };
+  const s2 = { ...S("s2", "f2"), levels: new Set(["f1", "f2"]), elevation: { bottom: 10, top: 20, topInclusive: true } };
+  const s = scene([f1, f2], [s1, s2]);
+  const created = { id: "st", shapes: [rect], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", managed: true } } };
+  await intents.onCreateRegion(created, {}, "gm1");
+  const updates = s.updateEmbeddedDocuments.mock.calls[0][1];
+  const upper = updates.find((u) => u._id === "s2");
+  const lower = updates.find((u) => u._id === "s1");
+  expect(upper["flags.floorer.holes"][0].mirrorOf).toBeUndefined();
+  expect(lower["flags.floorer.holes"][0].mirrorOf).toBe(upper["flags.floorer.holes"][0].id);
+  for (const u of updates) {
+    const doc = u._id === "s1" ? s1 : s2;
+    doc.shapes = u.shapes;
+    doc.flags.floorer.holes = u["flags.floorer.holes"];
+  }
+  expect(lint(buildFloorPlan({ levels: [f1, f2], regions: [s1, s2] }))).toEqual([]);
+});
+
+test("stair with only the lower surface appends there without mirrorOf", async () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const f2 = L("f2", 10, 20, ["f2"]);
+  const s = scene([f1, f2], [S("s1", "f1")]);
+  const created = { id: "st", shapes: [rect], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", managed: true } } };
+  await intents.onCreateRegion(created, {}, "gm1");
+  const updates = s.updateEmbeddedDocuments.mock.calls[0][1];
+  expect(updates.map((u) => u._id)).toEqual(["s1"]);
+  expect(updates[0]["flags.floorer.holes"][0].mirrorOf).toBeUndefined();
 });
 
 test("stair mirror skipped when setting off", async () => {

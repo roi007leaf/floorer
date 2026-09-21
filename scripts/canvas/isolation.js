@@ -1,8 +1,20 @@
 import { ISOLATION_ALPHA, SETTINGS } from "../constants.js";
+import { bandOf, finiteOrNull } from "../model/floor-plan.js";
 import { getSetting, setSetting } from "../settings.js";
 import { view } from "./view.js";
 
-const LAYERS = ["regions", "walls", "lighting", "sounds"];
+const LAYERS = ["regions", "walls", "lighting", "sounds", "tiles"];
+
+function inBand(value, band) {
+  if (value === null) return true;
+  return value >= (band.bottom ?? -Infinity) && value < (band.top ?? Infinity);
+}
+
+function elevationOf(doc) {
+  if (typeof doc.elevation === "number") return finiteOrNull(doc.elevation);
+  if (doc.elevation && "bottom" in doc.elevation) return finiteOrNull(doc.elevation.bottom);
+  return undefined;
+}
 
 class Isolation {
   #active = false;
@@ -22,15 +34,20 @@ class Isolation {
     this.refreshAll();
   }
 
-  alphaFor(doc, activeLevelId) {
-    const levels = doc.levels ? Array.from(doc.levels) : [];
-    if (!levels.length || levels.includes(activeLevelId)) return null;
-    return ISOLATION_ALPHA;
+  alphaFor(doc, activeLevel) {
+    if (!activeLevel) return null;
+    const home = doc.flags?.floorer?.levelId;
+    if (home) return home === activeLevel.id ? null : ISOLATION_ALPHA;
+    const elevation = elevationOf(doc);
+    if (elevation === undefined) return null;
+    return inBand(elevation, bandOf(activeLevel)) ? null : ISOLATION_ALPHA;
   }
 
   onRefresh(placeable) {
-    if (!this.#active || !this.enabled || !view.activeLevelId) return;
-    placeable.alpha = this.alphaFor(placeable.document, view.activeLevelId) ?? 1;
+    if (!this.#active || !this.enabled) return;
+    const level = view.activeLevel;
+    if (!level) return;
+    placeable.alpha = this.alphaFor(placeable.document, level) ?? 1;
   }
 
   refreshAll() {

@@ -37,7 +37,7 @@ Hooks.on("createRegion", (doc, options, userId) => {
 Hooks.on("activateSceneControls", () => intents.onSceneControls());
 Hooks.on("getSceneControlButtons", registerControls);
 
-for (const hook of ["refreshRegion", "refreshWall", "refreshAmbientLight", "refreshAmbientSound"]) {
+for (const hook of ["refreshRegion", "refreshWall", "refreshAmbientLight", "refreshAmbientSound", "refreshTile"]) {
   Hooks.on(hook, (placeable) => {
     if (!game.user?.isGM) return;
     isolation.onRefresh(placeable);
