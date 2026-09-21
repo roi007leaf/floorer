@@ -90,7 +90,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       bandDraft: this.#bandDraft,
       expanded: this.#expanded,
     });
-    return { ...context, dimmingActive: !!view.activeLevelId, dimmingCount: isolation.count() };
+    return context;
   }
 
   _onFirstRender(context, options) {

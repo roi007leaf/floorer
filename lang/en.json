@@ -68,9 +68,7 @@
     },
     "Panel": {
       "Setup": "Set up levels",
-      "Dimming": "{count} items from other floors dimmed",
-      "DimmingNone": "Nothing from other floors here",
-      "DimmingTip": "While Floorer is open, regions, lights, sounds and tiles that belong to other floors are faded and cannot be clicked, so you always edit the floor you are viewing. Regions are only drawn on the Regions layer.",
+      "Help": "Click a level to view it, then draw its floor, cut holes and add stairs. While Floorer is open, regions, lights, sounds and tiles that belong to other floors are faded and cannot be clicked, so you always edit the floor you are viewing.",
       "Rename": "Rename level",
       "EditBand": "Edit elevation range",
       "BandBottom": "Bottom elevation (blank for −∞)",
