@@ -1,8 +1,8 @@
 import { FLAG_VERSION, INTENTS, ROLES } from "../constants.js";
-import { journal } from "../journal/journal.js";
+import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
 import { surfaceCreateData, wholeSceneShape } from "../model/regions.js";
-import { bandOf } from "../model/floor-plan.js";
+import { bandOf, findLevel } from "../model/floor-plan.js";
 
 function bandLabel(level) {
   const band = bandOf(level);
@@ -37,12 +37,17 @@ export function issueKey(issue) {
   return `${issue.id}:${issue.levelId}:${issue.docId ?? ""}`;
 }
 
+function intentContext(plan, intent) {
+  if (!intent) return null;
+  return { ...intent, levelName: findLevel(plan, intent.levelId)?.level.name ?? intent.levelId };
+}
+
 export function panelContext(plan, { activeLevelId, issues, intent, journalSize, isolationEnabled }) {
   return {
     sceneName: plan.scene?.name ?? "",
     rows: plan.levels.map((e) => row(e, plan, activeLevelId)).reverse(),
     issues: issues.map((i) => ({ ...i, fixable: !!i.fix, key: issueKey(i) })),
-    intent,
+    intent: intentContext(plan, intent),
     journalSize,
     isolationEnabled,
   };
@@ -61,7 +66,8 @@ function regionBefore(scene, data) {
 async function applyUpdateFix(scene, fix) {
   const { ids, ...data } = fix.data;
   const before = [regionBefore(scene, data)];
-  await journal.run({ op: "update", collection: fix.collection, scene, before }, () => scene.updateEmbeddedDocuments("Region", [data]));
+  const name = EMBEDDED_NAMES[fix.collection];
+  await journal.run({ op: "update", collection: fix.collection, scene, before }, () => scene.updateEmbeddedDocuments(name, [data]));
 }
 
 async function retargetStair(scene, docId, plan) {

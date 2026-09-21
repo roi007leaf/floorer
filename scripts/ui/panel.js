@@ -48,6 +48,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static open() {
+    if (!canvas.scene) return ui.notifications.warn(game.i18n.localize("FLOORER.Panel.NoScene"));
     FloorerPanel.#instance ??= new FloorerPanel();
     return FloorerPanel.#instance.render(true);
   }
@@ -72,7 +73,8 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     });
   }
 
-  _onFirstRender() {
+  _onFirstRender(context, options) {
+    super._onFirstRender(context, options);
     const saved = getSetting(SETTINGS.PANEL_POSITION);
     if (saved?.left !== undefined) this.setPosition(saved);
     this.#subscribe();
@@ -80,7 +82,8 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     autotag.setEnabledPredicate(() => FloorerPanel.isOpen);
   }
 
-  _onRender() {
+  _onRender(context, options) {
+    super._onRender(context, options);
     this.element.querySelectorAll("input[data-rename]").forEach((input) => {
       input.addEventListener("change", (ev) => this.#rename(ev.currentTarget.dataset.rename, ev.currentTarget.value));
     });

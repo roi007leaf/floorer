@@ -29,3 +29,11 @@ test("band label prints infinities for live docs", () => {
   const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false });
   expect(ctx.rows.map((r) => r.band)).toEqual(["10–∞", "-∞–0"]);
 });
+
+test("panelContext resolves the armed intent level name", () => {
+  const plan = buildFloorPlan({ levels: [{ ...L("f1", 0, 10, ["f1"]), name: "Ground" }], regions: [] });
+  const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: { kind: "hole", levelId: "f1", tool: "rectangle" }, journalSize: 0, isolationEnabled: false });
+  expect(ctx.intent.levelName).toBe("Ground");
+  const gone = panelContext(plan, { activeLevelId: null, issues: [], intent: { kind: "hole", levelId: "zz", tool: "rectangle" }, journalSize: 0, isolationEnabled: false });
+  expect(gone.intent.levelName).toBe("zz");
+});

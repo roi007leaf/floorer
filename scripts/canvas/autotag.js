@@ -16,7 +16,7 @@ function lightData(data, level) {
   const levels = levelsOf(data);
   const out = {};
   if (levels.length === 1) out.levels = [];
-  if (levels.length <= 1 && data.elevation !== level.elevation.bottom) out.elevation = level.elevation.bottom;
+  if (levels.length <= 1 && data.elevation !== level.elevation.base) out.elevation = level.elevation.base;
   return Object.keys(out).length ? out : null;
 }
 
@@ -25,7 +25,7 @@ function taggedData(kind, data, level) {
   const out = {};
   if (levels.length === 0) out.levels = [level.id];
   else if (!onlyActive(levels, level.id)) return null;
-  if (ELEVATED.has(kind) && data.elevation !== level.elevation.bottom) out.elevation = level.elevation.bottom;
+  if (ELEVATED.has(kind) && data.elevation !== level.elevation.base) out.elevation = level.elevation.base;
   return Object.keys(out).length ? out : null;
 }
 

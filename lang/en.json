@@ -57,7 +57,8 @@
       "RevertConfirm": "Undo all {count} Floorer changes made since this scene was opened?",
       "NothingToUndo": "Nothing to undo.",
       "NoTarget": "Pick a target level for the stair first.",
-      "PickTarget": "Pick stair target level"
+      "PickTarget": "Pick stair target level",
+      "NoScene": "Open a scene before using Floorer."
     },
     "Issue": {
       "surface-missing": "Level has no floor surface.",
