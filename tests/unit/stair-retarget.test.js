@@ -17,6 +17,7 @@ test("returns null for an unknown stair, unknown target or a no-op target", () =
   expect(stairRetargetUpdates(plan, "st", "f1", "zz")).toBeNull();
   expect(stairRetargetUpdates(plan, "st", "f1", "f1")).toBeNull();
   expect(stairRetargetUpdates(plan, "st", "zz", "f3")).toBeNull();
+  expect(stairRetargetUpdates(plan, "st", "f1", "f2")).toBeNull();
 });
 
 test("keeps the viewed level fixed and re-derives band, levels and flags from the new pair", () => {

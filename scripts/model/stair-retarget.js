@@ -42,6 +42,8 @@ export function stairRetargetUpdates(plan, stairId, fromLevelId, newTargetLevelI
   const from = findLevel(plan, fromLevelId);
   const target = findLevel(plan, newTargetLevelId);
   if (!stair || !from || !target || from === target) return null;
+  const current = stair.flags.floorer;
+  if (target.level.id === (current.levelId === from.level.id ? current.targetLevelId : current.levelId)) return null;
   const { lower, upper } = orderPair(from.level, target.level);
   const [lowerEntry, upperEntry] = [findLevel(plan, lower.id), findLevel(plan, upper.id)];
   const surfaceRemovals = stairRemovalUpdates(plan, stairId);
