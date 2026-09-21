@@ -138,6 +138,7 @@
       "stair-levels": "One-way stair",
       "stair-band": "Stair outside lower band",
       "stair-target-missing": "Stair target missing",
+      "stair-openings": "Stair has no opening in the floor between its levels",
       "level-overlap": "Overlaps another level",
       "level-gap": "Gap below this level",
       "level-overlap-with": "Overlaps {levels}"

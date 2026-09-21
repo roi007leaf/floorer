@@ -1,6 +1,7 @@
 import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, surfaceLevels } from "./floor-plan.js";
 import { holeAppendData } from "./holes.js";
 import { bandChangeUpdates, bandGaps } from "./band-edit.js";
+import { stairOpeningUpdates } from "./stair-retarget.js";
 
 export function sameSet(a, b) {
   const sa = new Set(a);
@@ -69,6 +70,45 @@ function stairIssues(entry, plan) {
   });
 }
 
+function stairHoleFor(surface, stairId) {
+  const holes = surface.flags?.floorer?.holes ?? [];
+  return holes.find((h) => h.stairId === stairId) ?? null;
+}
+
+function stairOpeningFix(entry, stair, plan) {
+  const flag = stair.flags.floorer;
+  const target = findLevel(plan, flag.targetLevelId);
+  if (!target) return null;
+  const { lower, upper } = orderPair(entry.level, target.level);
+  const lowerEntry = findLevel(plan, lower.id);
+  const upperEntry = findLevel(plan, upper.id);
+  const lowerSurface = lowerEntry?.surface && isManaged(lowerEntry.surface) ? lowerEntry.surface : null;
+  const upperSurface = upperEntry?.surface && isManaged(upperEntry.surface) ? upperEntry.surface : null;
+  if (!lowerSurface && !upperSurface) return null;
+  const lowerHole = lowerSurface ? stairHoleFor(lowerSurface, stair.id) : null;
+  const upperHole = upperSurface ? stairHoleFor(upperSurface, stair.id) : null;
+  if ((!lowerSurface || lowerHole) && (!upperSurface || upperHole)) return null;
+  const shapes = Array.from(stair.shapes ?? []);
+  if (!lowerHole && !upperHole) {
+    const [data, ...cascade] = stairOpeningUpdates(plan, stair);
+    return { collection: "regions", op: "update", data, cascade };
+  }
+  if (!lowerHole && lowerSurface) {
+    const data = holeAppendData(lowerSurface, shapes, { mirrorOf: shapes.map(() => upperHole.id), extra: { stairId: stair.id } });
+    return { collection: "regions", op: "update", data, cascade: [] };
+  }
+  const data = holeAppendData(upperSurface, shapes, { extra: { stairId: stair.id } });
+  return { collection: "regions", op: "update", data, cascade: [] };
+}
+
+function stairOpeningIssues(entry, plan) {
+  return entry.stairs.flatMap((stair) => {
+    if (!isManaged(stair)) return [];
+    const fix = stairOpeningFix(entry, stair, plan);
+    return fix ? [issue("stair-openings", entry.level.id, stair.id, fix)] : [];
+  });
+}
+
 function overlaps(a, b) {
   const ba = bandOf(a);
   const bb = bandOf(b);
@@ -100,6 +140,6 @@ function gapIssues(plan) {
 
 export function lint(plan) {
   const allLevels = plan.levels.map((e) => e.level);
-  const perLevel = plan.levels.filter((e) => e.managed).flatMap((e) => [...surfaceIssues(e, allLevels), ...holeIssues(e), ...stairIssues(e, plan)]);
+  const perLevel = plan.levels.filter((e) => e.managed).flatMap((e) => [...surfaceIssues(e, allLevels), ...holeIssues(e), ...stairIssues(e, plan), ...stairOpeningIssues(e, plan)]);
   return [...perLevel, ...overlapIssues(plan), ...gapIssues(plan)];
 }

@@ -37,6 +37,16 @@ function additions(lowerEntry, upperEntry, shapes, removals, extra) {
   return [upperUpdate, holeAppendData(lower, shapes, { mirrorOf: upperUpdate.ids, extra })];
 }
 
+export function stairOpeningUpdates(plan, stair, removals = []) {
+  const flag = stair.flags.floorer;
+  const fromEntry = findLevel(plan, flag.levelId);
+  const targetEntry = findLevel(plan, flag.targetLevelId);
+  if (!fromEntry || !targetEntry) return [];
+  const { lower, upper } = orderPair(fromEntry.level, targetEntry.level);
+  const [lowerEntry, upperEntry] = [findLevel(plan, lower.id), findLevel(plan, upper.id)];
+  return additions(lowerEntry, upperEntry, Array.from(stair.shapes ?? []), removals, { stairId: stair.id });
+}
+
 export function stairRetargetUpdates(plan, stairId, fromLevelId, newTargetLevelId) {
   const stair = findStair(plan, stairId);
   const from = findLevel(plan, fromLevelId);
@@ -45,11 +55,11 @@ export function stairRetargetUpdates(plan, stairId, fromLevelId, newTargetLevelI
   const current = stair.flags.floorer;
   if (target.level.id === (current.levelId === from.level.id ? current.targetLevelId : current.levelId)) return null;
   const { lower, upper } = orderPair(from.level, target.level);
-  const [lowerEntry, upperEntry] = [findLevel(plan, lower.id), findLevel(plan, upper.id)];
   const surfaceRemovals = stairRemovalUpdates(plan, stairId);
+  const nextStair = { ...stair, flags: { ...stair.flags, floorer: { ...current, levelId: lower.id, targetLevelId: upper.id } } };
   return {
     stair: stairUpdate(stair, lower, upper),
     surfaceRemovals,
-    surfaceAdditions: additions(lowerEntry, upperEntry, Array.from(stair.shapes ?? []), surfaceRemovals, { stairId }),
+    surfaceAdditions: stairOpeningUpdates(plan, nextStair, surfaceRemovals),
   };
 }
