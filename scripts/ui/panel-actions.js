@@ -363,6 +363,10 @@ export function armDraw(kind, levelId, tool, targetLevelId) {
   intents.arm({ kind, levelId, tool, targetLevelId });
 }
 
+export function armWallEdit(kind, levelId) {
+  intents.arm({ kind, levelId, tool: "select" });
+}
+
 export { INTENTS };
 
 async function focusLevel(levelId) {

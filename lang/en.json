@@ -23,12 +23,19 @@
       "Armed": {
         "footprint": "Draw the floor footprint for {level}. Esc to cancel.",
         "hole": "Draw a hole in the floor of {level}. Esc to cancel.",
-        "stair": "Draw the stair area on {level}. Esc to cancel."
+        "stair": "Draw the stair area on {level}. Esc to cancel.",
+        "door": "Click a wall to add a door. Esc to cancel.",
+        "window": "Click a wall to add a window. Esc to cancel."
       },
       "LevelMissing": "That level no longer exists.",
       "TargetMissing": "The stair target level no longer exists.",
       "SurfaceMissing": "Draw the floor footprint first, then cut holes.",
-      "WriteFailed": "Floorer could not update the surface regions."
+      "WriteFailed": "Floorer could not update the surface regions.",
+      "NoWall": "No wall near that point.",
+      "Cut": {
+        "door": "Door added.",
+        "window": "Window added."
+      }
     },
     "Setup": {
       "Title": "Set up levels",
@@ -122,7 +129,9 @@
         "WallsBuild": "Build walls along this floor's outline (outer edge and holes), tagged to this level. Re-run after changing the footprint.",
         "WallsRemove": "Remove the walls Floorer built or traced for this level",
         "WallsTrace": "Experimental: detect dark wall lines in this level's image and add them as walls. Undo removes them all.",
-        "WallsDraw": "Draw walls by hand on this floor — new walls are tagged to it automatically"
+        "WallsDraw": "Draw walls by hand on this floor — new walls are tagged to it automatically",
+        "Door": "Click a wall to cut a door there (one grid wide)",
+        "Window": "Click a wall to cut a window there: blocks movement, lets sight and light through"
       },
       "SealTooltip": "Sealed: this level sees only itself. Click to unseal.",
       "UnsealTooltip": "Click to seal: only this level will see itself.",

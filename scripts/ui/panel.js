@@ -10,7 +10,7 @@ import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
 import { WallTraceDialog } from "./wall-trace-dialog.js";
 import { canTrace } from "../model/trace.js";
-import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, removeLevelWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, armWallEdit, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, removeLevelWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -61,6 +61,8 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       removeWalls: FloorerPanel.#onRemoveWalls,
       traceWalls: FloorerPanel.#onTraceWalls,
       drawWalls: FloorerPanel.#onDrawWalls,
+      addDoor: FloorerPanel.#onWallEdit,
+      addWindow: FloorerPanel.#onWallEdit,
     },
   };
 
@@ -444,6 +446,10 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #onDrawWalls() {
     canvas.walls?.activate({ tool: "walls" });
+  }
+
+  static #onWallEdit(_event, target) {
+    armWallEdit(target.dataset.action === "addDoor" ? INTENTS.DOOR : INTENTS.WINDOW, target.dataset.levelId);
   }
 
   static async #onDeleteHole(_event, target) {

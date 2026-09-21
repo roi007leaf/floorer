@@ -1,7 +1,7 @@
 export const MODULE_ID = "floorer";
 export const FLAG_VERSION = 1;
 export const ROLES = Object.freeze({ LEVEL: "level", SURFACE: "surface", STAIR: "stair", OUTLINE_WALL: "outlineWall", INTERIOR_WALL: "interiorWall" });
-export const INTENTS = Object.freeze({ FOOTPRINT: "footprint", HOLE: "hole", STAIR: "stair" });
+export const INTENTS = Object.freeze({ FOOTPRINT: "footprint", HOLE: "hole", STAIR: "stair", DOOR: "door", WINDOW: "window" });
 export const SETTINGS = Object.freeze({
   MIRROR_HOLES: "mirrorHoles",
   AUTO_TAG: "autoTag",
