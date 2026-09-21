@@ -262,7 +262,7 @@ function wallScene(walls) {
 }
 
 const W = (id, c, object = {}) => ({ id, c, object, toObject: () => ({ _id: id, c, levels: ["f1"], move: 20, sight: 20, light: 20, sound: 20, door: 0, ds: 0, flags: { floorer: { role: "outlineWall", levelId: "f1" } } }) });
-const click = (x, y, button = 0) => ({ button, getLocalPosition: () => ({ x, y }) });
+const click = (x, y, button = 0) => ({ button, clientX: x, clientY: y, stopImmediatePropagation: jest.fn(), preventDefault: jest.fn() });
 
 test("arming a door intent activates the walls select tool and survives its scene-controls hook", () => {
   wallScene([]);
@@ -278,22 +278,19 @@ test("arming a door intent activates the walls select tool and survives its scen
   expect(intents.current).toBeNull();
 });
 
-test("bindStage registers the pointer listener once, and again after listeners were stripped", () => {
-  const bound = [];
-  const stage = { on: jest.fn((_n, fn) => bound.push(fn)), listeners: () => bound };
-  intents.bindStage(stage);
-  intents.bindStage(stage);
-  expect(stage.on).toHaveBeenCalledTimes(1);
-  expect(stage.on.mock.calls[0][0]).toBe("pointerdown");
-  bound.length = 0;
-  intents.bindStage(stage);
-  expect(stage.on).toHaveBeenCalledTimes(2);
+test("bindView registers the capture listener once per element", () => {
+  const view = { addEventListener: jest.fn() };
+  intents.bindView(view);
+  intents.bindView(view);
+  expect(view.addEventListener).toHaveBeenCalledTimes(1);
+  expect(view.addEventListener.mock.calls[0][0]).toBe("pointerdown");
+  expect(view.addEventListener.mock.calls[0][2]).toEqual({ capture: true });
 });
 
 test("clicking near a drawn wall with a door intent replaces it with door pieces", async () => {
   const s = wallScene([W("a", [0, 0, 400, 0]), W("hidden", [0, 30, 400, 30], null)]);
   intents.arm({ kind: "door", levelId: "f1", tool: "select" });
-  intents.onStagePointerDown(click(200, 20));
+  intents.onViewPointerDown(click(200, 20));
   expect(intents.current).toBeNull();
   await new Promise((r) => setTimeout(r, 0));
   expect(s.deleteEmbeddedDocuments).toHaveBeenCalledWith("Wall", ["a"]);
@@ -312,7 +309,7 @@ test("clicking near a drawn wall with a door intent replaces it with door pieces
 test("window intent opens sight and light on the middle piece while keeping movement blocked", async () => {
   const s = wallScene([W("a", [0, 0, 400, 0])]);
   intents.arm({ kind: "window", levelId: "f1", tool: "select" });
-  intents.onStagePointerDown(click(100, 0));
+  intents.onViewPointerDown(click(100, 0));
   await new Promise((r) => setTimeout(r, 0));
   const created = s.createEmbeddedDocuments.mock.calls[0][1];
   expect(created[1]).toMatchObject({ door: 0, move: 20, sight: 0, light: 0, sound: 0 });
@@ -322,21 +319,21 @@ test("window intent opens sight and light on the middle piece while keeping move
 test("door intent warns and stays armed when no wall is near, ignores other buttons, cancels on right click", () => {
   const s = wallScene([W("a", [0, 0, 400, 0])]);
   intents.arm({ kind: "door", levelId: "f1", tool: "select" });
-  intents.onStagePointerDown(click(200, 300));
+  intents.onViewPointerDown(click(200, 300));
   expect(ui.notifications.warn).toHaveBeenCalledWith(expect.stringContaining("NoWall"));
   expect(intents.current?.kind).toBe("door");
-  intents.onStagePointerDown(click(200, 0, 1));
+  intents.onViewPointerDown(click(200, 0, 1));
   expect(s.deleteEmbeddedDocuments).not.toHaveBeenCalled();
-  intents.onStagePointerDown(click(200, 0, 2));
+  intents.onViewPointerDown(click(200, 0, 2));
   expect(intents.current).toBeNull();
-  intents.onStagePointerDown(click(200, 0));
+  intents.onViewPointerDown(click(200, 0));
   expect(s.deleteEmbeddedDocuments).not.toHaveBeenCalled();
 });
 
 test("pointer clicks are ignored while a drawing intent is armed", () => {
   const s = wallScene([W("a", [0, 0, 400, 0])]);
   intents.arm({ kind: "footprint", levelId: "f1", tool: "polygon" });
-  intents.onStagePointerDown(click(200, 0));
+  intents.onViewPointerDown(click(200, 0));
   expect(s.deleteEmbeddedDocuments).not.toHaveBeenCalled();
   expect(intents.current?.kind).toBe("footprint");
 });

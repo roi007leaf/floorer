@@ -8,4 +8,4 @@ global.Hooks = { on: jest.fn(), once: jest.fn(), off: jest.fn(), callAll: jest.f
 global.foundry = { utils: { randomID: () => Math.random().toString(36).slice(2, 18), deepClone: (o) => JSON.parse(JSON.stringify(o)), mergeObject: (a, b) => ({ ...a, ...b }) } };
 global.CONFIG = { Token: { movement: { actions: { walk: {}, fly: {}, climb: {}, swim: {}, burrow: {}, crawl: {}, jump: {}, blink: {}, displace: {} } } } };
 global.CONST = { WALL_MOVEMENT_TYPES: { NONE: 0, NORMAL: 20 } };
-global.canvas = { level: null, scene: null };
+global.canvas = { level: null, scene: null, canvasCoordinatesFromClient: ({ x, y }) => ({ x, y }) };

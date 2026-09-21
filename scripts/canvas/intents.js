@@ -114,19 +114,22 @@ class Intents {
     return intent;
   }
 
-  #stageHandler = (event) => this.onStagePointerDown(event);
+  #boundViews = new WeakSet();
 
-  bindStage(stage) {
-    if (!stage || stage.listeners("pointerdown").includes(this.#stageHandler)) return;
-    stage.on("pointerdown", this.#stageHandler);
+  bindView(view) {
+    if (!view || this.#boundViews.has(view)) return;
+    this.#boundViews.add(view);
+    view.addEventListener("pointerdown", (event) => this.onViewPointerDown(event), { capture: true });
   }
 
-  onStagePointerDown(event) {
+  onViewPointerDown(event) {
     const intent = this.#current;
     if (!intent || !isWallEdit(intent.kind) || !canvas.scene) return;
     if (event.button === 2) return this.clear();
     if (event.button !== 0) return;
-    const { x, y } = event.getLocalPosition(canvas.stage);
+    event.stopImmediatePropagation();
+    event.preventDefault();
+    const { x, y } = canvas.canvasCoordinatesFromClient({ x: event.clientX, y: event.clientY });
     const wall = nearestWall(drawnWalls(canvas.scene), [x, y], canvas.grid.size * WALL_HIT_FRACTION);
     if (!wall) return notify("warn", "FLOORER.Intent.NoWall", {});
     this.#take();
