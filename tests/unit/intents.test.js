@@ -90,6 +90,24 @@ test("footprint adoption rewrites create data and clears", () => {
   expect(intents.current).toBeNull();
 });
 
+test("footprint adoption on a level with an existing surface deletes it once the new one is created", async () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const oldSurface = { ...S("s1", "f1"), toObject: () => ({ _id: "s1" }) };
+  const s = scene([f1], [oldSurface]);
+  const created = { id: "s2", shapes: [rect], flags: { floorer: { role: "surface", levelId: "f1", holes: [], managed: true } } };
+  await intents.onCreateRegion(created, {}, "gm1");
+  expect(s.deleteEmbeddedDocuments).toHaveBeenCalledWith("Region", ["s1"]);
+  expect(journal.size).toBe(1);
+});
+
+test("footprint adoption leaves the level alone when it had no prior surface", async () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const s = scene([f1], []);
+  const created = { id: "s1", shapes: [rect], flags: { floorer: { role: "surface", levelId: "f1", holes: [], managed: true } } };
+  await intents.onCreateRegion(created, {}, "gm1");
+  expect(s.deleteEmbeddedDocuments).not.toHaveBeenCalled();
+});
+
 test("ignores other users and no intent", () => {
   const doc = { updateSource: jest.fn() };
   expect(intents.onPreCreateRegion(doc, { shapes: [rect] }, {}, "gm1")).toBeUndefined();

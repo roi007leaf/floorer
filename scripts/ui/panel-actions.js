@@ -3,7 +3,7 @@ import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
 import { stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
 import { footprintForLevel } from "./footprint.js";
-import { bandOf, buildFloorPlan, findLevel, stairStops } from "../model/floor-plan.js";
+import { bandOf, buildFloorPlan, findLevel, isManaged, stairStops } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
 import { lint } from "../model/issues.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
@@ -238,6 +238,14 @@ async function applyUpdateFix(scene, fix) {
   await runUpdates(scene, "regions", cascade, cascade.map((d) => docBefore(scene, "regions", d)));
 }
 
+async function applyDeleteFix(scene, fix) {
+  const name = EMBEDDED_NAMES[fix.collection];
+  const docs = fix.ids.map((id) => scene[fix.collection].get(id)).filter(Boolean);
+  if (!docs.length) return;
+  const before = docs.map((d) => d.toObject());
+  await journal.run({ op: "delete", collection: fix.collection, scene, before }, () => scene.deleteEmbeddedDocuments(name, docs.map((d) => d.id)));
+}
+
 export async function applyBandChange(scene, plan, levelId, band) {
   const { levels, regions, tokens, before } = bandChangeUpdates(plan, levelId, band);
   await runUpdates(scene, "levels", levels, before.levels);
@@ -264,12 +272,25 @@ export async function applyFix(scene, issue, plan) {
   if (!fix) return;
   if (fix.intent) return intents.arm({ kind: fix.intent, levelId: fix.levelId, tool: "polygon" });
   if (fix.prompt === "stair-target") return promptStairTarget(scene, fix.docId, plan);
+  if (fix.op === "delete") return applyDeleteFix(scene, fix);
   return applyUpdateFix(scene, fix);
+}
+
+function managedSurfacesOf(entry) {
+  return [entry.surface, ...(entry.extraSurfaces ?? [])].filter((s) => s && isManaged(s));
+}
+
+async function deleteManagedSurfaces(scene, entry) {
+  const surfaces = managedSurfacesOf(entry);
+  if (!surfaces.length) return;
+  const before = surfaces.map((s) => s.toObject());
+  await journal.run({ op: "delete", collection: "regions", scene, before }, () => scene.deleteEmbeddedDocuments("Region", surfaces.map((s) => s.id)));
 }
 
 export async function wholeSceneSurface(scene, entry, allLevels, { walls = false } = {}) {
   const footprint = await footprintForLevel(scene, entry.level);
   const data = surfaceCreateData(entry.level, allLevels, footprint.shapes);
+  await deleteManagedSurfaces(scene, entry);
   await journal.run({ op: "create", collection: "regions", scene }, () => scene.createEmbeddedDocuments("Region", [data]));
   if (walls && footprint.traced) await buildOutlineWalls(scene, findLevel(buildFloorPlan(scene), entry.level.id));
   if (!getSetting(SETTINGS.MIRROR_HOLES)) return;

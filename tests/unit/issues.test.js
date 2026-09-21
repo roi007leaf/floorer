@@ -91,6 +91,20 @@ test("surface-missing yields footprint intent fix", () => {
   expect(issue.fix).toEqual({ intent: "footprint", levelId: "f1" });
 });
 
+test("surface-duplicate flags extra managed surfaces on a level with a delete fix", () => {
+  const s1 = S("s1", "f1", { levels: ["f1"], elevation: { bottom: 0, top: 10 }, holes: [{ id: "h1" }] });
+  const s2 = S("s2", "f1", { levels: ["f1"], elevation: { bottom: 0, top: 10 } });
+  const plan = buildFloorPlan({ levels: [f1()], regions: [s2, s1] });
+  const issue = lint(plan).find((i) => i.id === "surface-duplicate");
+  expect(issue).toMatchObject({ levelId: "f1", docId: "s1", label: "FLOORER.Issue.surface-duplicate", severity: "warning" });
+  expect(issue.fix).toEqual({ collection: "regions", op: "delete", ids: ["s2"] });
+});
+
+test("a single surface per level yields no surface-duplicate issue", () => {
+  const plan = buildFloorPlan({ levels: [f1()], regions: [S("s1", "f1", { levels: ["f1"], elevation: { bottom: 0, top: 10 } })] });
+  expect(ids(lint(plan))).not.toContain("surface-duplicate");
+});
+
 test("surface-levels fix rewrites levels", () => {
   const plan = buildFloorPlan({ levels: [f1(), f2()], regions: [
     S("s1", "f1", { levels: ["f1"], elevation: { bottom: 0, top: 10 } }),

@@ -123,7 +123,7 @@
         "WallsRemove": "Remove the walls Floorer built for this level",
         "WallsDraw": "Draw walls by hand on this floor — new walls are tagged to it automatically"
       },
-      "SealTooltip": "Sealed: this level sees only itself. Click to unseal.",
+      "SealTooltip": "Sealed: this level sees only itself (nothing above is drawn or visible). Click to unseal — needed if it opens upward, e.g. a cellar under a light-well.",
       "UnsealTooltip": "Click to seal: only this level will see itself.",
       "Footprint": "Footprint",
       "Adopt": "Manage",
@@ -147,6 +147,7 @@
     },
     "Issue": {
       "surface-missing": "No floor surface",
+      "surface-duplicate": "Level has more than one floor surface — the extra copies block openings",
       "surface-levels": "Surface not visible from every level",
       "surface-band": "Surface elevation off band",
       "hole-unmirrored": "Hole not mirrored below",

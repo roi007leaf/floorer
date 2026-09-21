@@ -68,21 +68,52 @@ export function stairStops(stair) {
 }
 
 function emptyFloorLevel(level) {
-  return { level, surface: null, stairs: [], arrivingStairs: [], managed: isManaged(level), below: null, above: null };
+  return { level, surface: null, extraSurfaces: [], stairs: [], arrivingStairs: [], managed: isManaged(level), below: null, above: null };
+}
+
+function holeCount(region) {
+  return (floorerFlag(region)?.holes ?? []).length;
+}
+
+function shapeCount(region) {
+  return toArray(region.shapes).length;
+}
+
+function betterSurface(a, b) {
+  const holes = holeCount(b) - holeCount(a);
+  if (holes !== 0) return holes > 0 ? b : a;
+  const shapes = shapeCount(b) - shapeCount(a);
+  return shapes > 0 ? b : a;
+}
+
+function pickSurface(surfaces) {
+  return surfaces.reduce((best, s) => (best ? betterSurface(best, s) : s), null);
+}
+
+function resolveSurfaces(entry, surfaces) {
+  const managed = surfaces.filter(isManaged);
+  const pool = managed.length ? managed : surfaces;
+  entry.surface = pickSurface(pool);
+  entry.extraSurfaces = pool.filter((s) => s !== entry.surface);
 }
 
 function attachRegions(byLevel, regions) {
+  const surfacesByLevel = new Map();
   for (const region of regions) {
     const flag = floorerFlag(region);
     if (!flag) continue;
     const entry = byLevel.get(flag.levelId);
     if (flag.role === ROLES.SURFACE) {
-      if (entry) entry.surface = region;
+      if (!entry) continue;
+      const list = surfacesByLevel.get(entry) ?? [];
+      list.push(region);
+      surfacesByLevel.set(entry, list);
     } else if (flag.role === ROLES.STAIR) {
       if (entry) entry.stairs.push(region);
       for (const id of [flag.targetLevelId, ...stairStops(region)]) byLevel.get(id)?.arrivingStairs.push(region);
     }
   }
+  for (const [entry, surfaces] of surfacesByLevel) resolveSurfaces(entry, surfaces);
 }
 
 function linkNeighbours(levels) {

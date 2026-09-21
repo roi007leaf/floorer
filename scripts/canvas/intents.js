@@ -1,5 +1,5 @@
 import { INTENTS, ROLES, SETTINGS } from "../constants.js";
-import { buildFloorPlan, findLevel } from "../model/floor-plan.js";
+import { buildFloorPlan, findLevel, isManaged } from "../model/floor-plan.js";
 import { holeUpdates } from "../model/holes.js";
 import { movementActionKeys, stairCreateData, surfaceCreateData } from "../model/regions.js";
 import { stairOpeningUpdates } from "../model/stair-retarget.js";
@@ -124,11 +124,23 @@ class Intents {
   }
 
   async onCreateRegion(document, options, userId) {
+    if (userId !== game.user.id || !canvas.scene) return;
     const flag = document.flags?.floorer;
-    if (userId !== game.user.id || flag?.role !== ROLES.STAIR || !canvas.scene) return;
+    if (flag?.role === ROLES.SURFACE) return this.#replacePriorSurfaces(document, flag);
+    if (flag?.role !== ROLES.STAIR) return;
     if (!getSetting(SETTINGS.MIRROR_HOLES)) return;
     const plan = buildFloorPlan(canvas.scene);
     await applyHoleUpdates(canvas.scene, stairOpeningUpdates(plan, document));
+  }
+
+  async #replacePriorSurfaces(document, flag) {
+    const plan = buildFloorPlan(canvas.scene);
+    const entry = findLevel(plan, flag.levelId);
+    if (!entry) return;
+    const stale = [entry.surface, ...entry.extraSurfaces].filter((s) => s && isManaged(s) && s.id !== document.id);
+    if (!stale.length) return;
+    const before = stale.map((s) => s.toObject());
+    await journal.run({ op: "delete", collection: "regions", scene: canvas.scene, before }, () => canvas.scene.deleteEmbeddedDocuments("Region", stale.map((s) => s.id)));
   }
 }
 

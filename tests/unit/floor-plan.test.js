@@ -100,6 +100,27 @@ test("shaftOf spans lower bottom to upper top and collects the levels inside as 
   expect(stairStops({ flags: {} })).toEqual([]);
 });
 
+test("buildFloorPlan picks the surface with more holes and lists extras", () => {
+  const many = R("many", "surface", "f1", { holes: [{ id: "h1" }, { id: "h2" }] });
+  const few = R("few", "surface", "f1", { holes: [{ id: "h1" }] });
+  const scene = { levels: [L("f1", 0, 10)], regions: [few, many] };
+  const plan = buildFloorPlan(scene);
+  expect(plan.levels[0].surface.id).toBe("many");
+  expect(plan.levels[0].extraSurfaces.map((s) => s.id)).toEqual(["few"]);
+});
+
+test("buildFloorPlan breaks a hole tie on shape count, then on first", () => {
+  const tied1 = R("tied1", "surface", "f1", { holes: [] });
+  const tied2 = R("tied2", "surface", "f1", { holes: [] });
+  const scene = { levels: [L("f1", 0, 10)], regions: [tied1, tied2] };
+  expect(buildFloorPlan(scene).levels[0].surface.id).toBe("tied1");
+
+  const moreShapes = { ...R("moreShapes", "surface", "f1", { holes: [] }), shapes: [{}, {}] };
+  const fewerShapes = { ...R("fewerShapes", "surface", "f1", { holes: [] }), shapes: [{}] };
+  const scene2 = { levels: [L("f1", 0, 10)], regions: [fewerShapes, moreShapes] };
+  expect(buildFloorPlan(scene2).levels[0].surface.id).toBe("moreShapes");
+});
+
 test("buildFloorPlan lists arriving stairs even when the owner level is gone", () => {
   const scene = { levels: [L("f2", 10, 20)], regions: [R("st", "stair", "gone", { targetLevelId: "f2" })] };
   const plan = buildFloorPlan(scene);

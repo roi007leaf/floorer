@@ -22,12 +22,17 @@ function issue(id, levelId, docId, fix, severity = "warning") {
   return { id, levelId, docId, label: `FLOORER.Issue.${id}`, fix, severity };
 }
 
+function surfaceDuplicateFix(extraSurfaces) {
+  return { collection: "regions", op: "delete", ids: extraSurfaces.map((r) => r.id) };
+}
+
 function surfaceIssues(entry, allLevels) {
   const out = [];
   const level = entry.level;
   if (!entry.surface) return [issue("surface-missing", level.id, null, { intent: "footprint", levelId: level.id })];
   const s = entry.surface;
-  if (!isManaged(s)) return [];
+  if (entry.extraSurfaces?.length) out.push(issue("surface-duplicate", level.id, s.id, surfaceDuplicateFix(entry.extraSurfaces)));
+  if (!isManaged(s)) return out;
   const want = surfaceLevels(level, allLevels);
   if (!sameSet(s.levels, want)) out.push(issue("surface-levels", level.id, s.id, { collection: "regions", op: "update", data: { _id: s.id, levels: want } }));
   if (!sameBand(s.elevation, bandOf(level))) out.push(issue("surface-band", level.id, s.id, { collection: "regions", op: "update", data: bandData(s.id, bandOf(level)) }));
