@@ -1,5 +1,7 @@
 # Floorer
 
+![Floorer demo: setup, traced floors, stair, level change](docs/floorer-demo.gif)
+
 Guided builder for Foundry VTT v14 multi-level scenes. GM only.
 
 ## Workflow
