@@ -32,16 +32,33 @@ export function surfaceCreateData(level, allLevels, shapes) {
   };
 }
 
-export function stairCreateData(levelA, levelB, shapes, actions) {
+export const STAIR_PALETTE = ["#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabebe", "#469990", "#dcbeff"];
+
+export function stairColor(index) {
+  return STAIR_PALETTE[index % STAIR_PALETTE.length];
+}
+
+export function stairCreateData(levelA, levelB, shapes, actions, index = 0) {
   const { lower, upper } = orderPair(levelA, levelB);
   return {
     name: `Stair ${lower.name} ↔ ${upper.name}`,
+    color: stairColor(index),
     shapes,
     elevation: band(lower),
     levels: [lower.id, upper.id],
     behaviors: [stairBehavior(actions)],
-    flags: { floorer: { role: ROLES.STAIR, levelId: lower.id, targetLevelId: upper.id, managed: true, v: FLAG_VERSION } },
+    flags: { floorer: { role: ROLES.STAIR, levelId: lower.id, targetLevelId: upper.id, index, managed: true, v: FLAG_VERSION } },
   };
+}
+
+export function managedStairs(regions) {
+  return Array.from(regions).filter((r) => r.flags?.floorer?.role === ROLES.STAIR && r.flags.floorer.managed);
+}
+
+export function stairIndexUpdates(regions) {
+  const stairs = managedStairs(regions);
+  if (!stairs.some((r) => r.flags.floorer.index === undefined)) return [];
+  return stairs.map((r, index) => ({ _id: r.id, color: stairColor(index), "flags.floorer.index": index }));
 }
 
 export function wholeSceneShape(rect) {

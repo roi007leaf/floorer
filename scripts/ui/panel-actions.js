@@ -1,7 +1,7 @@
 import { FLAG_VERSION, INTENTS, ROLES } from "../constants.js";
 import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
-import { surfaceCreateData, wholeSceneShape } from "../model/regions.js";
+import { stairIndexUpdates, surfaceCreateData, wholeSceneShape } from "../model/regions.js";
 import { bandOf, findLevel } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
@@ -68,9 +68,14 @@ function firstShape(region) {
   return Array.from(region.shapes ?? [])[0] ?? null;
 }
 
+function stairCode(stair) {
+  const index = stair.flags?.floorer?.index;
+  return index === undefined || index === null ? "S?" : `S${index + 1}`;
+}
+
 function stairItem(stair, entry, plan) {
   const other = findLevel(plan, otherLevelId(stair, entry))?.level;
-  return { id: stair.id, levelId: stair.flags?.floorer?.levelId, label: `\u2194 ${other?.name ?? "?"}`, shape: shapeSummary(firstShape(stair)) };
+  return { id: stair.id, levelId: stair.flags?.floorer?.levelId, color: stair.color ?? null, code: stairCode(stair), label: `\u2194 ${other?.name ?? "?"}`, shape: shapeSummary(firstShape(stair)) };
 }
 
 function holeShapesOf(surface) {
@@ -165,6 +170,7 @@ function fieldBefore(doc, key) {
   if (key === "elevation") return elevationBefore(doc);
   if (key === "shapes") return plainShapes(doc);
   if (key === "levels") return Array.from(doc.levels);
+  if (key === "color") return doc.color?.css ?? doc.color ?? null;
   return foundry.utils.deepClone(key.includes(".") ? foundry.utils.getProperty(doc, key) : doc[key]);
 }
 
@@ -282,6 +288,12 @@ export async function deleteStair(scene, plan, stairId) {
 
 export async function deleteHole(scene, plan, holeId) {
   await applyHoleRemovals(scene, holeRemovalUpdates(plan, holeId));
+}
+
+export async function assignStairIndices(scene) {
+  const updates = stairIndexUpdates(scene.regions);
+  await runUpdates(scene, "regions", updates, updates.map((d) => docBefore(scene, "regions", d)));
+  return updates.length;
 }
 
 export async function applySeal(scene, plan, levelId, sealed) {

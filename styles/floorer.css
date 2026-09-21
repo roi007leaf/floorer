@@ -515,6 +515,31 @@
     gap: var(--floorer-gap);
     height: 26px;
     font-size: 12px;
+    border-radius: var(--floorer-radius);
+    transition: background-color 120ms ease;
+
+    &.linked {
+      background: var(--floorer-primary-bg-light);
+    }
+
+    .swatch {
+      flex: 0 0 auto;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .code {
+      flex: 0 0 auto;
+      padding: 0 5px;
+      border-radius: 8px;
+      font-family: var(--font-monospace, monospace);
+      font-size: 11px;
+      line-height: 16px;
+      color: var(--floorer-muted);
+      background: rgba(255, 255, 255, 0.06);
+    }
 
     .label {
       flex: 0 0 auto;

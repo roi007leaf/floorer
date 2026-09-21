@@ -2,6 +2,7 @@ import { intents } from "../../scripts/canvas/intents.js";
 import { journal } from "../../scripts/journal/journal.js";
 import { lint } from "../../scripts/model/issues.js";
 import { buildFloorPlan } from "../../scripts/model/floor-plan.js";
+import { STAIR_PALETTE } from "../../scripts/model/regions.js";
 
 const rect = { type: "rectangle", x: 0, y: 0, width: 10, height: 10, rotation: 0, hole: false };
 const L = (id, bottom, top, vis) => ({ id, _id: id, name: id, elevation: { bottom, top }, visibility: { levels: new Set(vis) }, flags: { floorer: { role: "level", managed: true } } });
@@ -11,7 +12,7 @@ function scene(levels, regions) {
   const s = {
     id: "s",
     levels: { get: (id) => levels.find((l) => l.id === id), [Symbol.iterator]: () => levels[Symbol.iterator]() },
-    regions: { get: (id) => regions.find((r) => r.id === id), [Symbol.iterator]: () => regions[Symbol.iterator]() },
+    regions: { get: (id) => regions.find((r) => r.id === id), filter: (fn) => regions.filter(fn), [Symbol.iterator]: () => regions[Symbol.iterator]() },
     updateEmbeddedDocuments: jest.fn(async (_n, data) => data.map((d) => ({ id: d._id }))),
     createEmbeddedDocuments: jest.fn(async () => []),
     deleteEmbeddedDocuments: jest.fn(async () => []),
@@ -141,10 +142,25 @@ test("stair adoption uses lower band and mirrors on create", async () => {
   expect(src.elevation).toEqual({ bottom: 0, top: 10, topInclusive: true });
   expect(src.levels).toEqual(["f1", "f2"]);
   expect(src.behaviors[0].type).toBe("changeLevel");
+  expect(src.flags.floorer.index).toBe(0);
+  expect(src.color).toBe(STAIR_PALETTE[0]);
   const created = { id: "st", shapes: [rect], flags: { floorer: src.flags.floorer } };
   await intents.onCreateRegion(created, {}, "gm1");
   const updates = s.updateEmbeddedDocuments.mock.calls[0][1];
   expect(updates.map((u) => u._id).sort()).toEqual(["s1", "s2"]);
+});
+
+test("stair index counts the stairs already in the scene", () => {
+  const f1 = L("f1", 0, 10, ["f1"]);
+  const f2 = L("f2", 10, 20, ["f2"]);
+  const existing = (id) => ({ id, _id: id, shapes: [rect], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", managed: true } } });
+  scene([f1, f2], [S("s1", "f1"), existing("a"), existing("b")]);
+  intents.arm({ kind: "stair", levelId: "f1", targetLevelId: "f2", tool: "rectangle" });
+  const doc = { updateSource: jest.fn() };
+  intents.onPreCreateRegion(doc, { shapes: [rect] }, {}, "gm1");
+  const src = doc.updateSource.mock.calls[0][0];
+  expect(src.flags.floorer.index).toBe(2);
+  expect(src.color).toBe(STAIR_PALETTE[2]);
 });
 
 test("stair mirror links the lower hole to the upper hole so lint is clean", async () => {

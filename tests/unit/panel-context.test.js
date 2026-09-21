@@ -119,7 +119,7 @@ const shape = (x) => ({ type: "rectangle", x, y: 0, width: 10, height: 20, rotat
 
 test("panelContext expands stair details with the other level and shape", () => {
   const plan = buildFloorPlan({ levels: [{ ...L("f1", 0, 10, ["f1"]), name: "Ground" }, { ...L("f2", 10, 20, ["f2"]), name: "L2" }], regions: [
-    { id: "s1", shapes: [{ ...shape(5), hole: false }], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", managed: true } } },
+    { id: "s1", color: "#e6194b", shapes: [{ ...shape(5), hole: false }], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", index: 0, managed: true } } },
     { id: "s2", shapes: [{ type: "polygon", points: [0, 0, 1, 0, 1, 1], hole: false }], flags: { floorer: { role: "stair", levelId: "f2", targetLevelId: "f1", managed: true } } },
   ] });
   const ctx = panelContext(plan, { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false, expanded: { levelId: "f1", kind: "stairs" } });
@@ -127,11 +127,22 @@ test("panelContext expands stair details with the other level and shape", () => 
   expect(f1.details).toEqual({
     kind: "stairs",
     items: [
-      { id: "s1", levelId: "f1", label: "↔ L2", shape: "10×20 @ 5,0" },
-      { id: "s2", levelId: "f2", label: "↔ L2", shape: "polygon · 3 pts" },
+      { id: "s1", levelId: "f1", color: "#e6194b", code: "S1", label: "↔ L2", shape: "10×20 @ 5,0" },
+      { id: "s2", levelId: "f2", color: null, code: "S?", label: "↔ L2", shape: "polygon · 3 pts" },
     ],
   });
   expect(ctx.rows.find((r) => r.id === "f2").details).toBeNull();
+});
+
+test("panelContext shows the same swatch and code on both linked levels", () => {
+  const plan = buildFloorPlan({ levels: [L("f1", 0, 10, ["f1"]), L("f2", 10, 20, ["f2"])], regions: [
+    { id: "s1", color: "#3cb44b", shapes: [{ ...shape(5), hole: false }], flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", index: 1, managed: true } } },
+  ] });
+  const opts = { activeLevelId: null, issues: [], intent: null, journalSize: 0, isolationEnabled: false };
+  const own = panelContext(plan, { ...opts, expanded: { levelId: "f1", kind: "stairs" } }).rows.find((r) => r.id === "f1").details.items[0];
+  const arriving = panelContext(plan, { ...opts, expanded: { levelId: "f2", kind: "stairs" } }).rows.find((r) => r.id === "f2").details.items[0];
+  expect(own).toMatchObject({ id: "s1", color: "#3cb44b", code: "S2" });
+  expect(arriving).toMatchObject({ id: "s1", color: "#3cb44b", code: "S2" });
 });
 
 test("panelContext expands drawn holes only, numbered, with their shapes", () => {

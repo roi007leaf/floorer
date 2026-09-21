@@ -48,8 +48,10 @@
     {{#if details}}
     <ul class="row-details">
       {{#each details.items}}
-      <li class="detail-row">
+      <li class="detail-row" {{#if (eq ../details.kind "stairs")}}data-region-id="{{id}}"{{/if}}>
         {{#if (eq ../details.kind "stairs")}}
+        <span class="swatch" data-color="{{color}}"></span>
+        <span class="code">{{code}}</span>
         <span class="label">{{label}}</span>
         <span class="shape">{{shape}}</span>
         <button type="button" class="icon" data-action="locateRegion" data-region-id="{{id}}" data-level-id="{{../id}}" data-tooltip="{{localize 'FLOORER.Panel.Locate'}}"><i class="fas fa-crosshairs"></i></button>

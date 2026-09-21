@@ -8,7 +8,7 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, renameLevel, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -21,6 +21,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   #editingBandId = null;
   #bandDraft = null;
   #expanded = null;
+  #indexing = false;
 
   static DEFAULT_OPTIONS = {
     id: `${MODULE_ID}-panel`,
@@ -109,6 +110,40 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     });
     this.#bindBandEditor();
+    this.#paintSwatches();
+    this.#bindStairHover();
+    this.#ensureStairIndices();
+  }
+
+  #paintSwatches() {
+    this.element.querySelectorAll(".swatch[data-color]").forEach((el) => {
+      el.style.backgroundColor = el.dataset.color;
+    });
+  }
+
+  #bindStairHover() {
+    this.element.querySelectorAll(".detail-row[data-region-id]").forEach((row) => {
+      row.addEventListener("mouseenter", (ev) => this.#hoverStair(row.dataset.regionId, ev, true));
+      row.addEventListener("mouseleave", (ev) => this.#hoverStair(row.dataset.regionId, ev, false));
+    });
+  }
+
+  #hoverStair(regionId, event, active) {
+    this.element.querySelectorAll(`.detail-row[data-region-id="${regionId}"]`).forEach((row) => row.classList.toggle("linked", active));
+    const object = canvas.scene?.regions.get(regionId)?.object;
+    if (!object || !canvas.ready) return;
+    if (active) object._onHoverIn(event, { hoverOutOthers: true, updateLegend: false });
+    else object._onHoverOut(event, { updateLegend: false });
+  }
+
+  async #ensureStairIndices() {
+    if (this.#indexing || !canvas.scene) return;
+    this.#indexing = true;
+    try {
+      await assignStairIndices(canvas.scene);
+    } finally {
+      this.#indexing = false;
+    }
   }
 
   #bandEditor() {
