@@ -34,6 +34,13 @@ export class WallPreview {
   #inner = null;
   #hooks = [];
   #onResize = () => this.sync();
+  #raf = null;
+  #last = "";
+
+  #tick = () => {
+    this.sync();
+    this.#raf = requestAnimationFrame(this.#tick);
+  };
 
   show() {
     if (this.#svg) return;
@@ -45,13 +52,19 @@ export class WallPreview {
     this.#hooks = [["canvasPan", Hooks.on("canvasPan", () => this.sync())]];
     window.addEventListener("resize", this.#onResize);
     this.sync();
+    this.#raf = requestAnimationFrame(this.#tick);
   }
 
   sync() {
     if (!this.#svg || !canvas.ready) return;
     if (!this.#svg.isConnected) document.body.appendChild(this.#svg);
-    this.#outer.setAttribute("transform", viewTransform());
-    this.#inner.setAttribute("transform", stageTransform());
+    const outer = viewTransform();
+    const inner = stageTransform();
+    const key = outer + inner;
+    if (key === this.#last) return;
+    this.#last = key;
+    this.#outer.setAttribute("transform", outer);
+    this.#inner.setAttribute("transform", inner);
   }
 
   draw(segments) {
@@ -66,6 +79,9 @@ export class WallPreview {
   }
 
   hide() {
+    if (this.#raf) cancelAnimationFrame(this.#raf);
+    this.#raf = null;
+    this.#last = "";
     for (const [hook, id] of this.#hooks) Hooks.off(hook, id);
     this.#hooks = [];
     window.removeEventListener("resize", this.#onResize);
