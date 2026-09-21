@@ -2,7 +2,7 @@ import { FLAG_VERSION, INTENTS, ROLES, SETTINGS } from "../constants.js";
 import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
 import { stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
-import { footprintShapesForLevel } from "./footprint.js";
+import { footprintForLevel } from "./footprint.js";
 import { bandOf, buildFloorPlan, findLevel, stairStops } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
 import { lint } from "../model/issues.js";
@@ -264,9 +264,10 @@ export async function applyFix(scene, issue, plan) {
 }
 
 export async function wholeSceneSurface(scene, entry, allLevels, { walls = false } = {}) {
-  const data = surfaceCreateData(entry.level, allLevels, await footprintShapesForLevel(scene, entry.level));
+  const footprint = await footprintForLevel(scene, entry.level);
+  const data = surfaceCreateData(entry.level, allLevels, footprint.shapes);
   await journal.run({ op: "create", collection: "regions", scene }, () => scene.createEmbeddedDocuments("Region", [data]));
-  if (walls) await buildOutlineWalls(scene, findLevel(buildFloorPlan(scene), entry.level.id));
+  if (walls && footprint.traced) await buildOutlineWalls(scene, findLevel(buildFloorPlan(scene), entry.level.id));
   if (!getSetting(SETTINGS.MIRROR_HOLES)) return;
   const update = tracedHoleMirror(buildFloorPlan(scene), entry.level.id);
   if (update) await applyHoleAdditions(scene, [update]);
