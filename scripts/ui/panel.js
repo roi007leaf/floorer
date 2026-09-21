@@ -13,7 +13,7 @@ import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
-const RERENDER_HOOKS = ["createRegion", "updateRegion", "deleteRegion", "createLevel", "updateLevel", "deleteLevel", "floorer.levelsChanged"];
+const RERENDER_HOOKS = ["createRegion", "updateRegion", "deleteRegion", "createLevel", "updateLevel", "deleteLevel", "floorer.levelsChanged", "activateSceneControls"];
 
 export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static #instance = null;
