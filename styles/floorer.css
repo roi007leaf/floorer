@@ -673,6 +673,10 @@
   }
 }
 
+.floorer-launch:hover {
+  color: var(--floorer-primary);
+}
+
 .floorer-setup {
   .window-content {
     padding: var(--floorer-pad) 12px 12px;

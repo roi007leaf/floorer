@@ -61,7 +61,10 @@
       }
     },
     "Controls": {
-      "Open": "Open Floorer"
+      "Open": "Open Floorer",
+      "OpenFromConfig": "Open Floorer for this scene",
+      "ViewSceneFirst": "View this scene first to build its levels.",
+      "ConfigHint": "Build multi-level scenes with Floorer: generate levels from floor images, draw floors, holes and stairs."
     },
     "Panel": {
       "Setup": "Set up levels",
