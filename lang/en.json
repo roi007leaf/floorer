@@ -140,6 +140,7 @@
       "stair-band": "Stair band does not span the climb",
       "stair-target-missing": "Stair target missing",
       "stair-openings": "Stair is missing an opening in one of the floors it spans",
+      "stair-stale-opening": "Stair opening left on a floor this stair no longer connects",
       "level-overlap": "Overlaps another level",
       "level-gap": "Gap below this level",
       "level-overlap-with": "Overlaps {levels} — fine when the levels don't share floor space (e.g. a cellar under open ground)"

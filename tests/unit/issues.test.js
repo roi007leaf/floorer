@@ -328,6 +328,27 @@ test("touching managed levels have no level-gap", () => {
   expect(ids(lint(plan))).not.toContain("level-gap");
 });
 
+test("stair-stale-opening flags an opening left on a floor the stair no longer stops at, and the stair-levels fix cascades its removal", () => {
+  const elsewhere = { type: "rectangle", x: 100, y: 100, width: 1, height: 1, hole: false };
+  const holeShape = { type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: true };
+  const plan = buildFloorPlan({ levels: [f1(), f2(), f3()], regions: [
+    S("s1", "f1", { levels: ["f1", "f3"], elevation: { bottom: 0, top: 10 } }),
+    S("s2", "f2", { levels: ["f2"], elevation: { bottom: 10, top: 20 }, holes: [{ id: "so2", stairId: "st" }], shapes: [elsewhere, holeShape] }),
+    S("s3", "f3", { levels: ["f1", "f3"], elevation: { bottom: 20, top: 30 } }),
+    { ...ST("st", "f1", "f3", { levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 } }), flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f3", stops: ["f2"], managed: true } } },
+  ] });
+  const issues = lint(plan);
+  const stale = issues.find((i) => i.id === "stair-stale-opening");
+  expect(stale).toMatchObject({ levelId: "f1", docId: "st", label: "FLOORER.Issue.stair-stale-opening", severity: "warning" });
+  expect(stale.fix.data._id).toBe("s2");
+  expect(stale.fix.data["flags.floorer.holes"]).toEqual([]);
+  expect(stale.fix.data.shapes).toEqual([elsewhere]);
+
+  const levelsIssue = issues.find((i) => i.id === "stair-levels");
+  expect(levelsIssue.fix.data).toEqual({ _id: "st", levels: ["f1", "f3"], "flags.floorer.stops": [] });
+  expect(levelsIssue.fix.cascade).toEqual([stale.fix.data]);
+});
+
 test("stair openings are never reported as unmirrored holes", () => {
   const hole = { type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: true };
   const s2 = S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 }, holes: [{ id: "h1", stairId: "st" }] });
