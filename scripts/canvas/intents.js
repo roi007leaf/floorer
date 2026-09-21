@@ -70,7 +70,6 @@ class Intents {
   #current = null;
   #arming = false;
   #listeners = new Set();
-  #stages = new WeakSet();
 
   get current() {
     return this.#current;
@@ -115,10 +114,11 @@ class Intents {
     return intent;
   }
 
+  #stageHandler = (event) => this.onStagePointerDown(event);
+
   bindStage(stage) {
-    if (!stage || this.#stages.has(stage)) return;
-    this.#stages.add(stage);
-    stage.on("pointerdown", (event) => this.onStagePointerDown(event));
+    if (!stage || stage.listeners("pointerdown").includes(this.#stageHandler)) return;
+    stage.on("pointerdown", this.#stageHandler);
   }
 
   onStagePointerDown(event) {

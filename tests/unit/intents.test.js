@@ -278,12 +278,16 @@ test("arming a door intent activates the walls select tool and survives its scen
   expect(intents.current).toBeNull();
 });
 
-test("bindStage registers the pointer listener once per stage", () => {
-  const stage = { on: jest.fn() };
+test("bindStage registers the pointer listener once, and again after listeners were stripped", () => {
+  const bound = [];
+  const stage = { on: jest.fn((_n, fn) => bound.push(fn)), listeners: () => bound };
   intents.bindStage(stage);
   intents.bindStage(stage);
   expect(stage.on).toHaveBeenCalledTimes(1);
   expect(stage.on.mock.calls[0][0]).toBe("pointerdown");
+  bound.length = 0;
+  intents.bindStage(stage);
+  expect(stage.on).toHaveBeenCalledTimes(2);
 });
 
 test("clicking near a drawn wall with a door intent replaces it with door pieces", async () => {
