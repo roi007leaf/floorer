@@ -15,6 +15,7 @@
       {{/if}}
       {{#if isScene}}
       <select name="scene" data-tooltip="{{localize 'FLOORER.Variants.Tip.Scene'}}">
+        <option value="" {{#unless sceneChosen}}selected{{/unless}}>{{localize "FLOORER.Variants.PickScene"}}</option>
         {{#each scenes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
       </select>
       <select name="sceneLevel" data-tooltip="{{localize 'FLOORER.Variants.Tip.SceneLevel'}}">
