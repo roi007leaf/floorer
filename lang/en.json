@@ -184,6 +184,7 @@
       "Title": "Stair destinations per state",
       "Hint": "Where {stair} leads in each scene state.",
       "NoStates": "This scene has no states yet. Add one from the panel header first.",
+      "NoDestination": "Pick a scene that has at least one level for this state's destination.",
       "SceneHint": "Picking another scene copies this stair's own shape into that scene as a landing region, so tokens arrive on the matching spot.",
       "Kind": {
         "off": "Off",

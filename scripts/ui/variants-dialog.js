@@ -2,11 +2,9 @@ import { MODULE_ID } from "../constants.js";
 import { buildFloorPlan } from "../model/floor-plan.js";
 import { sceneStates, variantsOf } from "../model/states.js";
 import { ensureArrivalRegion, plainShapes, setStairVariant } from "./panel-actions.js";
+import { draftFromRow, VARIANT_KINDS, VARIANT_PLACEMENTS } from "./variants-form.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-
-const KINDS = ["off", "level", "scene"];
-const PLACEMENTS = ["center", "relative", "random"];
 
 function options(values, selected, label) {
   return values.map((v) => ({ id: v, label: label(v), selected: v === selected }));
@@ -24,9 +22,9 @@ function selectRows(rows, selected) {
 }
 
 function sceneRows(scene) {
-  return Array.from(game.scenes ?? [])
-    .filter((s) => s.id !== scene?.id)
-    .map((s) => ({ id: s.id, name: s.name }));
+  const all = Array.from(game.scenes ?? []);
+  const others = all.filter((s) => s.id !== scene?.id);
+  return (others.length ? others : all).map((s) => ({ id: s.id, name: s.name }));
 }
 
 export class VariantsDialog extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -64,18 +62,18 @@ export class VariantsDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   #row(state, variant, levels, scenes) {
-    const kind = KINDS.includes(variant?.kind) ? variant.kind : "off";
+    const kind = VARIANT_KINDS.includes(variant?.kind) ? variant.kind : "off";
     const target = kind === "scene" ? game.scenes?.get(variant.sceneId) : null;
     return {
       stateId: state.id,
       name: state.name,
-      kinds: options(KINDS, kind, (k) => `FLOORER.Variants.Kind.${k}`),
+      kinds: options(VARIANT_KINDS, kind, (k) => `FLOORER.Variants.Kind.${k}`),
       isLevel: kind === "level",
       isScene: kind === "scene",
       levels: selectRows(levels, variant?.levelId),
       scenes: selectRows(scenes, variant?.sceneId),
       sceneLevels: selectRows(levelRows(target), variant?.levelId),
-      placements: options(PLACEMENTS, variant?.placement ?? "center", (p) => `FLOORER.Variants.Placement.${p}`),
+      placements: options(VARIANT_PLACEMENTS, variant?.placement ?? "center", (p) => `FLOORER.Variants.Placement.${p}`),
     };
   }
 
@@ -90,10 +88,9 @@ export class VariantsDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   #read(row) {
     const value = (name) => row.querySelector(`select[name="${name}"]`)?.value ?? null;
-    const kind = value("kind");
-    if (kind === "level") return { kind, levelId: value("level") };
-    if (kind === "scene") return { kind, sceneId: value("scene"), levelId: value("sceneLevel"), placement: value("placement") };
-    return { kind: "off" };
+    const values = { kind: value("kind"), level: value("level"), scene: value("scene"), sceneLevel: value("sceneLevel"), placement: value("placement") };
+    const scenes = sceneRows(canvas.scene);
+    return draftFromRow(values, { currentSceneId: canvas.scene?.id ?? null, firstOtherSceneId: scenes[0]?.id ?? null });
   }
 
   async #resolve(draft) {
@@ -108,7 +105,10 @@ export class VariantsDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   async #commit(row) {
     const scene = canvas.scene;
     const variant = await this.#resolve(this.#read(row));
-    if (!variant) return this.render();
+    if (!variant) {
+      ui.notifications.warn(game.i18n.localize("FLOORER.Variants.NoDestination"));
+      return this.render();
+    }
     await setStairVariant(scene, buildFloorPlan(scene), this.#stairId, row.dataset.stateId, variant);
     await this.render();
   }
