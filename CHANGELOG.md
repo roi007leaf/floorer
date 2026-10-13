@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-alpha.4
+
+**Scene states** — one scene, several configurations, and each stair can lead somewhere different in each.
+
+- Define named states for a scene (an airship's *Upright*, *Rolled to port*, *Docked*) from the panel header; the header then shows a switcher.
+- Each stair gets a destination per state: another **level** in this scene, a level in **another scene**, or **off**. Picking another scene copies the stair's own shape there as a landing region, so tokens arrive on the matching spot.
+- Switching a state retargets every stair, re-tags and re-bands its region, re-cuts the floor openings so sight and light follow the stairwell actually in use, and enables exactly one destination behaviour. Re-applying the same state writes nothing.
+- `game.modules.get("floorer").api.setState(scene, "Inverted")` so a macro can drive it mid-sequence.
+- New lint: a stair missing a destination for some state, a destination whose scene or region is gone, and a variant with no behaviour behind it.
+
+Known limitation: a combat that crosses scenes fights Foundry's per-scene combat tracker. For an encounter, model each configuration as its own set of levels in one scene and use level destinations rather than scene destinations.
+
 ## 1.0.0-alpha.3
 
 - Update checks work again: the manifest URL now points at the manifest on `main` instead of `releases/latest`, which GitHub does not resolve for pre-releases (it returned 404, so Foundry could never see a new version).
