@@ -1,7 +1,7 @@
-import { findLevel, isManaged, orderPair, shaftOf } from "./floor-plan.js";
+import { findLevel, isManaged, orderPair } from "./floor-plan.js";
 import { holeAppendData, stairRemovalUpdates } from "./holes.js";
 import { padShape, STAIR_OPENING_PAD } from "./shapes.js";
-import { stairLevelTags, stairStops } from "./regions.js";
+import { stairBandFor, stairLevelTags, stairStops, stairVariantLevels } from "./regions.js";
 
 function findStair(plan, stairId) {
   return plan.levels.flatMap((e) => e.stairs).find((s) => s.id === stairId) ?? null;
@@ -28,13 +28,13 @@ function planAfterRemoval(plan, removals) {
 }
 
 function stairUpdate(stair, lower, upper, plan, removals) {
-  const shaft = shaftOf(lower, upper, allLevels(plan));
+  const variantLevels = stairVariantLevels(stair, allLevels(plan));
   const stops = stairStops(planAfterRemoval(plan, removals), lower, upper, stair.shapes);
   return {
     _id: stair.id,
     name: `Stair ${lower.name} ↔ ${upper.name}`,
-    elevation: { ...shaft.band, topInclusive: true },
-    levels: stairLevelTags(lower, upper, stops),
+    elevation: { ...stairBandFor(lower, upper, variantLevels), topInclusive: true },
+    levels: stairLevelTags(lower, upper, stops, variantLevels),
     "flags.floorer.levelId": lower.id,
     "flags.floorer.targetLevelId": upper.id,
     "flags.floorer.stops": stops,

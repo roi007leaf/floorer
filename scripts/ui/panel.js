@@ -8,7 +8,7 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, locateHole, locateRegion, panelContext, removeLevel, removeLevelWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
+import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, lintOptions, locateHole, locateRegion, panelContext, removeLevel, removeLevelWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -86,7 +86,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const plan = this.plan;
     const context = panelContext(plan, {
       activeLevelId: view.activeLevelId,
-      issues: lint(plan),
+      issues: lint(plan, lintOptions()),
       intent: intents.current,
       journalSize: journal.size,
       editingBandId: this.#editingBandId,
@@ -317,7 +317,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onFix(_event, target) {
     const plan = this.plan;
-    const issue = lint(plan).find((i) => issueKey(i) === target.dataset.issueKey);
+    const issue = lint(plan, lintOptions()).find((i) => issueKey(i) === target.dataset.issueKey);
     if (issue) await applyFix(canvas.scene, issue, plan);
     this.render();
   }
@@ -325,7 +325,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onFixAll() {
     for (let i = 0; i < 20; i++) {
       const plan = this.plan;
-      const issue = lint(plan).find((it) => it.fix && !it.fix.intent && !it.fix.prompt);
+      const issue = lint(plan, lintOptions()).find((it) => it.fix && !it.fix.intent && !it.fix.prompt);
       if (!issue) break;
       await applyFix(canvas.scene, issue, plan);
     }

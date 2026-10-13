@@ -156,9 +156,15 @@
       "stair-target-missing": "Stair target missing",
       "stair-openings": "Stair is missing an opening in one of the floors it spans",
       "stair-stale-opening": "Stair opening left on a floor this stair no longer connects",
+      "state-variant-missing": "Stair has no destination for every scene state",
+      "state-destination-missing": "Stair destination scene or region no longer exists",
+      "state-behavior-missing": "Stair is missing the behavior for one of its state destinations",
       "level-overlap": "Overlaps another level",
       "level-gap": "Gap below this level",
       "level-overlap-with": "Overlaps {levels} — fine when the levels don't share floor space (e.g. a cellar under open ground)"
+    },
+    "Api": {
+      "GMOnly": "Only a GM can change the Floorer scene state."
     },
     "Common": {
       "Cancel": "Cancel"

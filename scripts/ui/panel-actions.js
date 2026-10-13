@@ -1,7 +1,8 @@
 import { FLAG_VERSION, INTENTS, ROLES, SETTINGS } from "../constants.js";
 import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
-import { stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
+import { movementActionKeys, stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
+import { activeStateId, stateApplyUpdates, variantBehaviorData, variantsOf } from "../model/states.js";
 import { footprintForLevel } from "./footprint.js";
 import { bandOf, buildFloorPlan, findLevel, isManaged, stairStops } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
@@ -267,11 +268,36 @@ async function promptStairTarget(scene, docId, plan) {
   await journal.run({ op: "update", collection: "regions", scene, before }, () => scene.updateEmbeddedDocuments("Region", [{ _id: docId, "flags.floorer.targetLevelId": targetId }]));
 }
 
+export function lintOptions() {
+  return {
+    sceneExists: (id) => !!game.scenes?.get(id),
+    regionExists: (sceneId, regionId) => !!game.scenes?.get(sceneId)?.regions?.get(regionId),
+    actions: movementActionKeys(),
+  };
+}
+
+function withDisabled(scene, data) {
+  const active = activeStateId(scene);
+  return data.map((d) => ({ ...d, disabled: d.flags?.floorer?.stateId !== active }));
+}
+
+async function createBehaviors(scene, region, data) {
+  if (!data.length) return [];
+  return journal.run({ op: "create", collection: "behaviors", scene, parent: region }, () => region.createEmbeddedDocuments("RegionBehavior", withDisabled(scene, data)));
+}
+
+async function applyBehaviorCreateFix(scene, fix) {
+  const region = scene.regions.get(fix.regionId);
+  if (!region) return;
+  await createBehaviors(scene, region, fix.data);
+}
+
 export async function applyFix(scene, issue, plan) {
   const fix = issue.fix;
   if (!fix) return;
   if (fix.intent) return intents.arm({ kind: fix.intent, levelId: fix.levelId, tool: "polygon" });
   if (fix.prompt === "stair-target") return promptStairTarget(scene, fix.docId, plan);
+  if (fix.collection === "behaviors") return applyBehaviorCreateFix(scene, fix);
   if (fix.op === "delete") return applyDeleteFix(scene, fix);
   return applyUpdateFix(scene, fix);
 }
@@ -326,7 +352,7 @@ async function mirrorHolesFromAbove(scene, levelId) {
   const plan = buildFloorPlan(scene);
   const surfaceId = findLevel(plan, levelId)?.surface?.id;
   if (!surfaceId) return;
-  const fixes = lint(plan).filter((i) => i.id === "hole-unmirrored" && i.fix?.data?._id === surfaceId);
+  const fixes = lint(plan, lintOptions()).filter((i) => i.id === "hole-unmirrored" && i.fix?.data?._id === surfaceId);
   for (const issue of fixes) await applyFix(scene, issue, buildFloorPlan(scene));
 }
 
@@ -441,4 +467,75 @@ export async function applySeal(scene, plan, levelId, sealed) {
   const { levels, regions, before } = sealUpdates(plan, levelId, sealed);
   await runUpdates(scene, "levels", levels, before.levels);
   await runUpdates(scene, "regions", regions, before.regions);
+}
+
+async function runBehaviorUpdates(scene, region, updates) {
+  if (!updates.length) return;
+  const before = updates.map((u) => ({ _id: u._id, disabled: !!region.behaviors.get(u._id)?.disabled }));
+  await journal.run({ op: "update", collection: "behaviors", scene, parent: region, before }, () => region.updateEmbeddedDocuments("RegionBehavior", updates));
+}
+
+export async function applySceneState(scene, plan, stateId) {
+  const before = { "flags.floorer.activeState": activeStateId(scene) };
+  await journal.run({ op: "update", collection: "scene", scene, before }, () => scene.update({ "flags.floorer.activeState": stateId }));
+  for (const { regionId, updates } of stateApplyUpdates(plan, stateId)) {
+    const region = scene.regions.get(regionId);
+    if (region) await runBehaviorUpdates(scene, region, updates);
+  }
+}
+
+function behaviorForState(region, stateId) {
+  return Array.from(region.behaviors ?? []).find((b) => b.flags?.floorer?.stateId === stateId) ?? null;
+}
+
+async function deleteBehaviors(scene, region, behaviors) {
+  if (!behaviors.length) return;
+  const before = behaviors.map((b) => b.toObject());
+  await journal.run({ op: "delete", collection: "behaviors", scene, parent: region, before }, () => region.deleteEmbeddedDocuments("RegionBehavior", behaviors.map((b) => b.id)));
+}
+
+async function retuneBehavior(scene, region, behavior, system) {
+  const before = [{ _id: behavior.id, system: foundry.utils.deepClone(behavior.system?.toObject?.() ?? behavior.system) }];
+  await journal.run({ op: "update", collection: "behaviors", scene, parent: region, before }, () => region.updateEmbeddedDocuments("RegionBehavior", [{ _id: behavior.id, system }]));
+}
+
+async function reapplyStairTags(scene, stairId) {
+  const plan = buildFloorPlan(scene);
+  const wanted = ["stair-levels", "stair-band"];
+  for (const issue of lint(plan, lintOptions()).filter((i) => i.docId === stairId && wanted.includes(i.id))) await applyFix(scene, issue, plan);
+}
+
+export async function setStairVariant(scene, plan, stairId, stateId, variant) {
+  const region = scene.regions.get(stairId);
+  if (!region) return;
+  const key = `flags.floorer.variants.${stateId}`;
+  const before = [{ _id: stairId, [key]: foundry.utils.deepClone(variantsOf(region)[stateId] ?? null) }];
+  await journal.run({ op: "update", collection: "regions", scene, before }, () => scene.updateEmbeddedDocuments("Region", [{ _id: stairId, [key]: variant }]));
+  const existing = behaviorForState(region, stateId);
+  const data = variantBehaviorData(variant, stateId, { actions: movementActionKeys() });
+  const keep = !!existing && !!data && existing.type === data.type;
+  if (existing && !keep) await deleteBehaviors(scene, region, [existing]);
+  if (keep) await retuneBehavior(scene, region, existing, data.system);
+  else if (data) await createBehaviors(scene, region, [data]);
+  await reapplyStairTags(scene, stairId);
+}
+
+function arrivalRegionOf(scene, levelId) {
+  return Array.from(scene.regions ?? []).find((r) => r.flags?.floorer?.role === ROLES.ARRIVAL && r.flags.floorer.levelId === levelId) ?? null;
+}
+
+export async function ensureArrivalRegion(targetScene, levelId, shapes) {
+  const existing = arrivalRegionOf(targetScene, levelId);
+  if (existing) return existing;
+  const level = targetScene.levels.get(levelId);
+  if (!level) return null;
+  const data = {
+    name: `Arrival ${level.name}`,
+    shapes,
+    elevation: { ...bandOf(level), topInclusive: true },
+    levels: [levelId],
+    flags: { floorer: { role: ROLES.ARRIVAL, levelId, managed: true, v: FLAG_VERSION } },
+  };
+  const [created] = await journal.run({ op: "create", collection: "regions", scene: targetScene }, () => targetScene.createEmbeddedDocuments("Region", [data]));
+  return created ?? null;
 }

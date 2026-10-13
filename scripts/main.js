@@ -6,12 +6,15 @@ import { isolation } from "./canvas/isolation.js";
 import { intents } from "./canvas/intents.js";
 import { registerControls } from "./ui/controls.js";
 import { injectSceneConfigButton } from "./ui/scene-config.js";
+import { api } from "./api.js";
 
 let escBound = false;
 
 Hooks.once("init", () => {
   console.log(`${MODULE_ID} | init`);
   registerSettings();
+  const module = game.modules.get(MODULE_ID);
+  if (module) module.api = api;
   view.onChange(() => isolation.refreshAll());
 });
 

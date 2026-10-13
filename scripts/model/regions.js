@@ -1,6 +1,7 @@
 import { FLAG_VERSION, ROLES } from "../constants.js";
-import { bandOf, findLevel, isManaged, orderPair, shaftLevels, shaftOf, surfaceLevels } from "./floor-plan.js";
+import { bandOf, findLevel, isManaged, orderPair, shaftBand, shaftLevels, shaftOf, surfaceLevels } from "./floor-plan.js";
 import { shapeCenter, shapesContain } from "./shapes.js";
+import { variantLevelIds } from "./states.js";
 
 export function surfaceBehavior(level) {
   const placement = bandOf(level).top === null ? "bottom" : "both";
@@ -56,8 +57,28 @@ export function stairStops(plan, lower, upper, shapes) {
     .map((l) => l.id);
 }
 
-export function stairLevelTags(lower, upper, stops) {
-  return [lower.id, ...stops, upper.id];
+export function stairVariantLevels(stair, allLevels) {
+  const ids = new Set(variantLevelIds(stair));
+  return allLevels.filter((l) => ids.has(l.id));
+}
+
+export function stairLevelTags(lower, upper, stops, variantLevels = []) {
+  return [...new Set([lower.id, ...stops, upper.id, ...variantLevels.map((l) => l.id)])];
+}
+
+function lowestBottom(bands) {
+  return bands.some((b) => b.bottom === null) ? null : Math.min(...bands.map((b) => b.bottom));
+}
+
+function highestTop(bands) {
+  return bands.some((b) => b.top === null) ? null : Math.max(...bands.map((b) => b.top));
+}
+
+export function stairBandFor(lower, upper, variantLevels = []) {
+  const base = shaftBand(lower, upper);
+  if (!variantLevels.length) return base;
+  const bands = [base, ...variantLevels.map(bandOf)];
+  return { bottom: lowestBottom(bands), top: highestTop(bands) };
 }
 
 export function stairCreateData(levelA, levelB, shapes, actions, index = 0, plan = { levels: [] }) {

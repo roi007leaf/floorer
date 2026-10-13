@@ -61,6 +61,33 @@ test("scene change clears", async () => {
   expect(journal.sceneId).toBe("b");
 });
 
+test("behaviours update undoes against the region parent, not the scene", async () => {
+  const scene = mockScene();
+  const region = { id: "r1", updateEmbeddedDocuments: jest.fn(async (_n, data) => data), createEmbeddedDocuments: jest.fn(async (_n, data) => data.map((d, i) => ({ id: `b${i}` }))), deleteEmbeddedDocuments: jest.fn(async () => []) };
+  const before = [{ _id: "b1", disabled: true }];
+  await journal.run({ op: "update", collection: "behaviors", scene, parent: region, before }, () => region.updateEmbeddedDocuments("RegionBehavior", [{ _id: "b1", disabled: false }]));
+  await journal.undo();
+  expect(region.updateEmbeddedDocuments).toHaveBeenLastCalledWith("RegionBehavior", before, { floorerJournal: true });
+  expect(scene.updateEmbeddedDocuments).not.toHaveBeenCalled();
+});
+
+test("behaviours create undoes by deleting from the region parent", async () => {
+  const scene = mockScene();
+  const region = { id: "r1", createEmbeddedDocuments: jest.fn(async () => [{ id: "b9" }]), deleteEmbeddedDocuments: jest.fn(async () => []) };
+  await journal.run({ op: "create", collection: "behaviors", scene, parent: region }, () => region.createEmbeddedDocuments("RegionBehavior", [{ type: "changeLevel" }]));
+  await journal.undo();
+  expect(region.deleteEmbeddedDocuments).toHaveBeenCalledWith("RegionBehavior", ["b9"], { floorerJournal: true });
+});
+
+test("a document-level update undoes through update on the scene itself", async () => {
+  const scene = { ...mockScene(), update: jest.fn(async () => ({})) };
+  const before = { "flags.floorer.activeState": "a" };
+  await journal.run({ op: "update", collection: "scene", scene, before }, () => scene.update({ "flags.floorer.activeState": "b" }));
+  expect(journal.size).toBe(1);
+  await journal.undo();
+  expect(scene.update).toHaveBeenLastCalledWith(before, { floorerJournal: true });
+});
+
 test("undo on empty returns false", async () => {
   expect(await journal.undo()).toBe(false);
 });

@@ -7,6 +7,7 @@ const EMBEDDED = Object.freeze({
   lights: "AmbientLight",
   sounds: "AmbientSound",
   notes: "Note",
+  behaviors: "RegionBehavior",
 });
 
 const OPTS = { floorerJournal: true };
@@ -41,16 +42,18 @@ class Journal {
   }
 
   #record(entry, result) {
-    const ids = entry.op === "create" ? result.map((d) => d.id) : (entry.before ?? []).map((d) => d._id);
-    return { ...entry, ids };
+    if (entry.op === "create") return { ...entry, ids: result.map((d) => d.id) };
+    const before = Array.isArray(entry.before) ? entry.before : [];
+    return { ...entry, ids: before.map((d) => d._id) };
   }
 
   async #reverse(entry) {
     const name = EMBEDDED[entry.collection];
-    const scene = entry.scene;
-    if (entry.op === "create") return scene.deleteEmbeddedDocuments(name, entry.ids, OPTS);
-    if (entry.op === "update") return scene.updateEmbeddedDocuments(name, entry.before, OPTS);
-    return scene.createEmbeddedDocuments(name, entry.before, { ...OPTS, keepId: true });
+    const parent = entry.parent ?? entry.scene;
+    if (!name) return parent.update(entry.before, OPTS);
+    if (entry.op === "create") return parent.deleteEmbeddedDocuments(name, entry.ids, OPTS);
+    if (entry.op === "update") return parent.updateEmbeddedDocuments(name, entry.before, OPTS);
+    return parent.createEmbeddedDocuments(name, entry.before, { ...OPTS, keepId: true });
   }
 
   async undo() {

@@ -1,8 +1,9 @@
-import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, shaftOf, stairStops as flagStairStops, surfaceLevels } from "./floor-plan.js";
+import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, stairStops as flagStairStops, surfaceLevels } from "./floor-plan.js";
 import { holeAppendData, removeHolesData } from "./holes.js";
 import { bandChangeUpdates, bandGaps } from "./band-edit.js";
 import { stairOpeningShapes, stairOpeningUpdates, stairSurfaces } from "./stair-retarget.js";
-import { stairLevelTags, stairStops } from "./regions.js";
+import { movementActionKeys, stairBandFor, stairLevelTags, stairStops, stairVariantLevels } from "./regions.js";
+import { missingVariantBehaviors, sceneStates, variantsOf } from "./states.js";
 
 export function sameSet(a, b) {
   const sa = new Set(a);
@@ -87,27 +88,28 @@ function stairIssues(entry, plan, allLevels) {
     const target = findLevel(plan, stair.flags.floorer.targetLevelId);
     if (!target) return [issue("stair-target-missing", entry.level.id, stair.id, { prompt: "stair-target", docId: stair.id })];
     const { lower, upper } = orderPair(entry.level, target.level);
-    const shaft = shaftOf(lower, upper, allLevels);
+    const variantLevels = stairVariantLevels(stair, allLevels);
     const stops = stairStops(plan, lower, upper, stair.shapes);
     const out = [];
-    const tags = stairLevelTags(lower, upper, stops);
+    const tags = stairLevelTags(lower, upper, stops, variantLevels);
+    const band = stairBandFor(lower, upper, variantLevels);
     if (!sameSet(stair.levels, tags) || !sameSet(flagStairStops(stair), stops)) {
       const removals = staleOpeningRemovals(plan, tags, stair.id);
       out.push(issue("stair-levels", entry.level.id, stair.id, updateFix([stairTagData(stair, tags, stops), ...removals])));
     }
-    if (!sameBand(stair.elevation, shaft.band)) out.push(issue("stair-band", entry.level.id, stair.id, { collection: "regions", op: "update", data: bandData(stair.id, shaft.band) }));
+    if (!sameBand(stair.elevation, band)) out.push(issue("stair-band", entry.level.id, stair.id, { collection: "regions", op: "update", data: bandData(stair.id, band) }));
     return out;
   });
 }
 
-function staleOpeningIssues(entry, plan) {
+function staleOpeningIssues(entry, plan, allLevels) {
   return entry.stairs.flatMap((stair) => {
     if (!isManaged(stair)) return [];
     const target = findLevel(plan, stair.flags.floorer.targetLevelId);
     if (!target) return [];
     const { lower, upper } = orderPair(entry.level, target.level);
     const stops = stairStops(plan, lower, upper, stair.shapes);
-    const tags = stairLevelTags(lower, upper, stops);
+    const tags = stairLevelTags(lower, upper, stops, stairVariantLevels(stair, allLevels));
     const removals = staleOpeningRemovals(plan, tags, stair.id);
     return removals.length ? [issue("stair-stale-opening", entry.level.id, stair.id, updateFix(removals))] : [];
   });
@@ -165,8 +167,30 @@ function gapIssues(plan) {
   return bandGaps(plan).map((gap) => issue("level-gap", gap.upperId, gap.lowerId, gapFix(plan, gap)));
 }
 
-export function lint(plan) {
+function brokenSceneVariant(variants, { sceneExists, regionExists }) {
+  return Object.values(variants).some((v) => v?.kind === "scene" && !(sceneExists(v.sceneId) && regionExists(v.sceneId, v.regionId)));
+}
+
+function stateIssues(entry, plan, options) {
+  const states = sceneStates(plan.scene);
+  return entry.stairs.flatMap((stair) => {
+    if (!isManaged(stair)) return [];
+    const variants = variantsOf(stair);
+    if (!Object.keys(variants).length) return [];
+    const out = [];
+    if (states.length && states.some((s) => !variants[s.id])) out.push(issue("state-variant-missing", entry.level.id, stair.id, null));
+    if (brokenSceneVariant(variants, options)) out.push(issue("state-destination-missing", entry.level.id, stair.id, null));
+    const missing = missingVariantBehaviors(stair, { actions: options.actions });
+    if (missing.length) out.push(issue("state-behavior-missing", entry.level.id, stair.id, { collection: "behaviors", op: "create", regionId: stair.id, data: missing }));
+    return out;
+  });
+}
+
+export function lint(plan, { sceneExists = () => true, regionExists = () => true, actions = null } = {}) {
   const allLevels = plan.levels.map((e) => e.level);
-  const perLevel = plan.levels.filter((e) => e.managed).flatMap((e) => [...surfaceIssues(e, allLevels), ...holeIssues(e), ...stairIssues(e, plan, allLevels), ...stairOpeningIssues(e, plan), ...staleOpeningIssues(e, plan)]);
+  const options = { sceneExists, regionExists, actions: actions ?? movementActionKeys() };
+  const perLevel = plan.levels
+    .filter((e) => e.managed)
+    .flatMap((e) => [...surfaceIssues(e, allLevels), ...holeIssues(e), ...stairIssues(e, plan, allLevels), ...stairOpeningIssues(e, plan), ...staleOpeningIssues(e, plan, allLevels), ...stateIssues(e, plan, options)]);
   return [...perLevel, ...overlapIssues(plan), ...gapIssues(plan)];
 }

@@ -363,6 +363,70 @@ test("stair-stale-opening flags an opening left on a floor the stair no longer s
   expect(levelsIssue.fix.cascade).toEqual([stale.fix.data]);
 });
 
+function variantPlan(variants, { states = [], levels = ["f1", "f2"], elevation = { bottom: 0, top: 20 }, behaviors = [] } = {}) {
+  const st = { ...ST("st", "f1", "f2", { levels, elevation }), behaviors, flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", variants, managed: true } } };
+  return buildFloorPlan({
+    flags: { floorer: { states } },
+    levels: [f1(), f2(), f3()],
+    regions: [
+      S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 }, holes: [{ id: "so1", stairId: "st", mirrorOf: "so2" }] }),
+      S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 }, holes: [{ id: "so2", stairId: "st" }] }),
+      S("s3", "f3", { levels: ["f3"], elevation: { bottom: 20, top: 30 } }),
+      st,
+    ],
+  });
+}
+
+const stateBeh = (id, stateId) => ({ id, _id: id, flags: { floorer: { stateId } } });
+
+test("a level variant extends the stair tag set and band, and stair-levels/stair-band agree", () => {
+  const variants = { a: { kind: "level", levelId: "f3" } };
+  const behaviors = [stateBeh("b1", "a")];
+  const clean = variantPlan(variants, { levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 }, behaviors });
+  expect(ids(lint(clean))).not.toContain("stair-levels");
+  expect(ids(lint(clean))).not.toContain("stair-band");
+  const stale = variantPlan(variants, { behaviors });
+  const issues = lint(stale);
+  expect(issues.find((i) => i.id === "stair-levels").fix.data).toEqual({ _id: "st", levels: ["f1", "f2", "f3"], "flags.floorer.stops": [] });
+  expect(issues.find((i) => i.id === "stair-band").fix.data).toEqual({ _id: "st", elevation: { bottom: 0, top: 30, topInclusive: true } });
+});
+
+test("state-variant-missing flags a state with no entry and stays quiet when every state is covered", () => {
+  const states = [{ id: "a", name: "A" }, { id: "b", name: "B" }];
+  const behaviors = [stateBeh("b1", "a")];
+  const issue = lint(variantPlan({ a: { kind: "off" } }, { states, behaviors })).find((i) => i.id === "state-variant-missing");
+  expect(issue).toMatchObject({ levelId: "f1", docId: "st", label: "FLOORER.Issue.state-variant-missing", severity: "warning", fix: null });
+  const covered = variantPlan({ a: { kind: "off" }, b: { kind: "off" } }, { states, behaviors });
+  expect(ids(lint(covered))).not.toContain("state-variant-missing");
+  const stateless = variantPlan({ a: { kind: "off" } }, { behaviors });
+  expect(ids(lint(stateless))).not.toContain("state-variant-missing");
+});
+
+test("a stair with no variants raises no state issues", () => {
+  const plan = variantPlan(undefined, { states: [{ id: "a", name: "A" }] });
+  expect(ids(lint(plan)).filter((id) => id.startsWith("state-"))).toEqual([]);
+});
+
+test("state-destination-missing flags an unresolvable cross-scene variant", () => {
+  const variants = { a: { kind: "scene", sceneId: "sc", regionId: "rg" } };
+  const behaviors = [stateBeh("b1", "a")];
+  const resolvers = { sceneExists: (id) => id === "sc", regionExists: (sceneId, regionId) => sceneId === "sc" && regionId === "rg" };
+  expect(ids(lint(variantPlan(variants, { behaviors }), resolvers))).not.toContain("state-destination-missing");
+  const issue = lint(variantPlan(variants, { behaviors }), { ...resolvers, sceneExists: () => false }).find((i) => i.id === "state-destination-missing");
+  expect(issue).toMatchObject({ docId: "st", label: "FLOORER.Issue.state-destination-missing", fix: null });
+  expect(ids(lint(variantPlan(variants, { behaviors }), { ...resolvers, regionExists: () => false }))).toContain("state-destination-missing");
+  expect(ids(lint(variantPlan(variants, { behaviors })))).not.toContain("state-destination-missing");
+});
+
+test("state-behavior-missing fixes by creating the behaviors for uncovered variants", () => {
+  const variants = { a: { kind: "level", levelId: "f3" }, b: { kind: "off" } };
+  const plan = variantPlan(variants, { levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 } });
+  const issue = lint(plan, { actions: ["walk", "fly"] }).find((i) => i.id === "state-behavior-missing");
+  expect(issue.fix).toEqual({ collection: "behaviors", op: "create", regionId: "st", data: [{ type: "changeLevel", system: { movementActions: ["walk", "fly"] }, flags: { floorer: { stateId: "a" } } }] });
+  const covered = variantPlan(variants, { levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 }, behaviors: [stateBeh("b1", "a")] });
+  expect(ids(lint(covered))).not.toContain("state-behavior-missing");
+});
+
 test("stair openings are never reported as unmirrored holes", () => {
   const hole = { type: "rectangle", x: 0, y: 0, width: 1, height: 1, hole: true };
   const s2 = S("s2", "f2", { levels: ["f1", "f2"], elevation: { bottom: 10, top: 20 }, holes: [{ id: "h1", stairId: "st" }] });
