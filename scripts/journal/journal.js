@@ -29,13 +29,18 @@ class Journal {
     this.#sceneId = null;
   }
 
-  #syncScene(scene) {
-    if (this.#sceneId !== scene.id) this.clear();
-    this.#sceneId = scene.id;
+  #viewedId(entry) {
+    return canvas?.scene?.id ?? entry.scene.id;
+  }
+
+  #syncScene(entry) {
+    const id = this.#viewedId(entry);
+    if (this.#sceneId !== id) this.clear();
+    this.#sceneId = id;
   }
 
   async run(entry, fn) {
-    this.#syncScene(entry.scene);
+    this.#syncScene(entry);
     const result = await fn();
     this.#entries.push(this.#record(entry, result));
     return result;

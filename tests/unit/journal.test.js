@@ -9,7 +9,10 @@ function mockScene(id = "s1") {
   };
 }
 
-beforeEach(() => journal.clear());
+beforeEach(() => {
+  canvas.scene = null;
+  journal.clear();
+});
 
 test("run create records ids and undo deletes them", async () => {
   const scene = mockScene();
@@ -54,11 +57,49 @@ test("failed fn does not record", async () => {
   expect(journal.size).toBe(0);
 });
 
-test("scene change clears", async () => {
+test("with no viewed scene the stack falls back to the entry scene and clears on change", async () => {
   await journal.run({ op: "create", collection: "regions", scene: mockScene("a") }, async () => [{ id: "1" }]);
   await journal.run({ op: "create", collection: "regions", scene: mockScene("b") }, async () => [{ id: "2" }]);
   expect(journal.size).toBe(1);
   expect(journal.sceneId).toBe("b");
+});
+
+test("a foreign-scene entry rides in the viewed scene's stack and undoes against its own scene", async () => {
+  const viewed = mockScene("a");
+  const other = mockScene("b");
+  canvas.scene = viewed;
+  await journal.run({ op: "create", collection: "regions", scene: viewed }, () => viewed.createEmbeddedDocuments("Region", [{ _id: "r1" }]));
+  await journal.run({ op: "create", collection: "regions", scene: other }, () => other.createEmbeddedDocuments("Region", [{ _id: "r2" }]));
+  expect(journal.size).toBe(2);
+  expect(journal.sceneId).toBe("a");
+  await journal.undo();
+  expect(other.deleteEmbeddedDocuments).toHaveBeenCalledWith("Region", ["r2"], { floorerJournal: true });
+  expect(viewed.deleteEmbeddedDocuments).not.toHaveBeenCalled();
+  await journal.undo();
+  expect(viewed.deleteEmbeddedDocuments).toHaveBeenCalledWith("Region", ["r1"], { floorerJournal: true });
+  expect(journal.size).toBe(0);
+});
+
+test("switching the viewed scene clears the stack", async () => {
+  const viewed = mockScene("a");
+  canvas.scene = viewed;
+  await journal.run({ op: "create", collection: "regions", scene: viewed }, async () => [{ id: "1" }]);
+  await journal.run({ op: "create", collection: "regions", scene: mockScene("b") }, async () => [{ id: "2" }]);
+  expect(journal.size).toBe(2);
+  canvas.scene = mockScene("c");
+  await journal.run({ op: "create", collection: "regions", scene: viewed }, async () => [{ id: "3" }]);
+  expect(journal.size).toBe(1);
+  expect(journal.sceneId).toBe("c");
+});
+
+test("reversal is not itself journaled", async () => {
+  const viewed = mockScene("a");
+  canvas.scene = viewed;
+  const before = [{ _id: "r1", name: "old" }];
+  await journal.run({ op: "update", collection: "regions", scene: viewed, before }, () => viewed.updateEmbeddedDocuments("Region", [{ _id: "r1", name: "new" }]));
+  await journal.undo();
+  expect(journal.size).toBe(0);
+  expect(await journal.undo()).toBe(false);
 });
 
 test("behaviours update undoes against the region parent, not the scene", async () => {
