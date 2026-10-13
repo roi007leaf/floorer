@@ -1,9 +1,9 @@
 import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, stairStops as flagStairStops, surfaceLevels } from "./floor-plan.js";
 import { holeAppendData, removeHolesData } from "./holes.js";
 import { bandChangeUpdates, bandGaps } from "./band-edit.js";
-import { stairOpeningShapes, stairOpeningUpdates, stairSurfaces } from "./stair-retarget.js";
-import { movementActionKeys, stairBandFor, stairLevelTags, stairStops, stairVariantLevels } from "./regions.js";
-import { hasVariants, missingVariantBehaviors, sceneStates, variantsOf } from "./states.js";
+import { activeStair, stairOpeningShapes, stairOpeningUpdates, stairSurfaces } from "./stair-retarget.js";
+import { movementActionKeys, stairBandFor, stairLevelTags, stairStops } from "./regions.js";
+import { activeStateId, missingVariantBehaviors, sceneStates, variantsOf } from "./states.js";
 
 export function sameSet(a, b) {
   const sa = new Set(a);
@@ -82,17 +82,17 @@ function staleOpeningRemovals(plan, tags, stairId) {
     .filter(Boolean);
 }
 
-function stairIssues(entry, plan, allLevels) {
+function stairIssues(entry, plan, activeId) {
   return entry.stairs.flatMap((stair) => {
     if (!isManaged(stair)) return [];
-    const target = findLevel(plan, stair.flags.floorer.targetLevelId);
+    const active = activeStair(plan, stair, activeId);
+    const target = findLevel(plan, active.flags.floorer.targetLevelId);
     if (!target) return [issue("stair-target-missing", entry.level.id, stair.id, { prompt: "stair-target", docId: stair.id })];
     const { lower, upper } = orderPair(entry.level, target.level);
-    const variantLevels = stairVariantLevels(stair, allLevels);
     const stops = stairStops(plan, lower, upper, stair.shapes);
     const out = [];
-    const tags = stairLevelTags(lower, upper, stops, variantLevels);
-    const band = stairBandFor(lower, upper, variantLevels);
+    const tags = stairLevelTags(lower, upper, stops);
+    const band = stairBandFor(lower, upper);
     if (!sameSet(stair.levels, tags) || !sameSet(flagStairStops(stair), stops)) {
       const removals = staleOpeningRemovals(plan, tags, stair.id);
       out.push(issue("stair-levels", entry.level.id, stair.id, updateFix([stairTagData(stair, tags, stops), ...removals])));
@@ -102,14 +102,14 @@ function stairIssues(entry, plan, allLevels) {
   });
 }
 
-function staleOpeningIssues(entry, plan, allLevels) {
+function staleOpeningIssues(entry, plan, activeId) {
   return entry.stairs.flatMap((stair) => {
     if (!isManaged(stair)) return [];
-    const target = findLevel(plan, stair.flags.floorer.targetLevelId);
+    const target = findLevel(plan, activeStair(plan, stair, activeId).flags.floorer.targetLevelId);
     if (!target) return [];
     const { lower, upper } = orderPair(entry.level, target.level);
     const stops = stairStops(plan, lower, upper, stair.shapes);
-    const tags = stairLevelTags(lower, upper, stops, stairVariantLevels(stair, allLevels));
+    const tags = stairLevelTags(lower, upper, stops);
     const removals = staleOpeningRemovals(plan, tags, stair.id);
     return removals.length ? [issue("stair-stale-opening", entry.level.id, stair.id, updateFix(removals))] : [];
   });
@@ -130,10 +130,10 @@ function stairOpeningFix(stair, plan) {
   return updateFix(missingOpenings(surfaces, holes, stair));
 }
 
-function stairOpeningIssues(entry, plan) {
+function stairOpeningIssues(entry, plan, activeId) {
   return entry.stairs.flatMap((stair) => {
-    if (!isManaged(stair) || hasVariants(stair)) return [];
-    const fix = stairOpeningFix(stair, plan);
+    if (!isManaged(stair)) return [];
+    const fix = stairOpeningFix(activeStair(plan, stair, activeId), plan);
     return fix ? [issue("stair-openings", entry.level.id, stair.id, fix)] : [];
   });
 }
@@ -189,8 +189,9 @@ function stateIssues(entry, plan, options) {
 export function lint(plan, { sceneExists = () => true, regionExists = () => true, actions = null } = {}) {
   const allLevels = plan.levels.map((e) => e.level);
   const options = { sceneExists, regionExists, actions: actions ?? movementActionKeys() };
+  const activeId = activeStateId(plan.scene);
   const perLevel = plan.levels
     .filter((e) => e.managed)
-    .flatMap((e) => [...surfaceIssues(e, allLevels), ...holeIssues(e), ...stairIssues(e, plan, allLevels), ...stairOpeningIssues(e, plan), ...staleOpeningIssues(e, plan, allLevels), ...stateIssues(e, plan, options)]);
+    .flatMap((e) => [...surfaceIssues(e, allLevels), ...holeIssues(e), ...stairIssues(e, plan, activeId), ...stairOpeningIssues(e, plan, activeId), ...staleOpeningIssues(e, plan, activeId), ...stateIssues(e, plan, options)]);
   return [...perLevel, ...overlapIssues(plan), ...gapIssues(plan)];
 }

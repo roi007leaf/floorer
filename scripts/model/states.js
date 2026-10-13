@@ -41,13 +41,6 @@ function variantEntries(stair) {
   return Object.entries(variantsOf(stair));
 }
 
-export function variantLevelIds(stair) {
-  return variantEntries(stair)
-    .map(([, v]) => v)
-    .filter((v) => v?.kind === "level" && v.levelId)
-    .map((v) => v.levelId);
-}
-
 export function variantBehaviorData(variant, stateId, { actions = [] } = {}) {
   const flags = { floorer: { stateId } };
   if (variant?.kind === "level") return { type: "changeLevel", system: { movementActions: actions.filter((a) => a !== "displace") }, flags };
@@ -74,6 +67,10 @@ export function hasVariants(stair) {
   return variantEntries(stair).length > 0;
 }
 
+export function variantStairs(plan) {
+  return plan.levels.flatMap((e) => e.stairs).filter((stair) => isManaged(stair) && hasVariants(stair));
+}
+
 export function behaviorStateUpdates(stair, activeId) {
   const legacyEnabled = !hasVariants(stair);
   return behaviorList(stair).flatMap((behavior) => {
@@ -81,14 +78,6 @@ export function behaviorStateUpdates(stair, activeId) {
     const disabled = !(stateId === null ? legacyEnabled : stateId === activeId);
     return behavior.disabled === disabled ? [] : [{ _id: behaviorId(behavior), disabled }];
   });
-}
-
-export function stateApplyUpdates(plan, activeId) {
-  return plan.levels
-    .flatMap((e) => e.stairs)
-    .filter((stair) => isManaged(stair) && hasVariants(stair))
-    .map((stair) => ({ regionId: stair.id, updates: behaviorStateUpdates(stair, activeId) }))
-    .filter((e) => e.updates.length);
 }
 
 export function missingVariantBehaviors(stair, options = {}) {

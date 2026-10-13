@@ -363,10 +363,10 @@ test("stair-stale-opening flags an opening left on a floor the stair no longer s
   expect(levelsIssue.fix.cascade).toEqual([stale.fix.data]);
 });
 
-function variantPlan(variants, { states = [], levels = ["f1", "f2"], elevation = { bottom: 0, top: 20 }, behaviors = [] } = {}) {
-  const st = { ...ST("st", "f1", "f2", { levels, elevation }), behaviors, flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", variants, managed: true } } };
+function variantPlan(variants, { states = [], activeState = null, levels = ["f1", "f2"], elevation = { bottom: 0, top: 20 }, stops = [], behaviors = [] } = {}) {
+  const st = { ...ST("st", "f1", "f2", { levels, elevation }), behaviors, flags: { floorer: { role: "stair", levelId: "f1", targetLevelId: "f2", stops, variants, managed: true } } };
   return buildFloorPlan({
-    flags: { floorer: { states } },
+    flags: { floorer: { states, activeState } },
     levels: [f1(), f2(), f3()],
     regions: [
       S("s1", "f1", { levels: ["f1", "f2"], elevation: { bottom: 0, top: 10 }, holes: [{ id: "so1", stairId: "st", mirrorOf: "so2" }] }),
@@ -379,16 +379,33 @@ function variantPlan(variants, { states = [], levels = ["f1", "f2"], elevation =
 
 const stateBeh = (id, stateId) => ({ id, _id: id, flags: { floorer: { stateId } } });
 
-test("a level variant extends the stair tag set and band, and stair-levels/stair-band agree", () => {
-  const variants = { a: { kind: "level", levelId: "f3" } };
-  const behaviors = [stateBeh("b1", "a")];
-  const clean = variantPlan(variants, { levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 }, behaviors });
-  expect(ids(lint(clean))).not.toContain("stair-levels");
-  expect(ids(lint(clean))).not.toContain("stair-band");
-  const stale = variantPlan(variants, { behaviors });
-  const issues = lint(stale);
-  expect(issues.find((i) => i.id === "stair-levels").fix.data).toEqual({ _id: "st", levels: ["f1", "f2", "f3"], "flags.floorer.stops": [] });
-  expect(issues.find((i) => i.id === "stair-band").fix.data).toEqual({ _id: "st", elevation: { bottom: 0, top: 30, topInclusive: true } });
+const states2 = [{ id: "a", name: "A" }, { id: "b", name: "B" }];
+const variants2 = { a: { kind: "level", levelId: "f3" }, b: { kind: "off" } };
+const behaviors2 = [stateBeh("b1", "a"), stateBeh("b2", "b")];
+
+function statePlan(activeState) {
+  return variantPlan(variants2, { states: states2, activeState, behaviors: behaviors2, levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30 }, stops: ["f2"] });
+}
+
+test("stair-levels and stair-band expect the active variant pair, not the union of the variants", () => {
+  const climbing = ids(lint(statePlan("a")));
+  expect(climbing).not.toContain("stair-levels");
+  expect(climbing).not.toContain("stair-band");
+  const issues = lint(statePlan("b"));
+  expect(issues.find((i) => i.id === "stair-levels").fix.data).toEqual({ _id: "st", levels: ["f1"], "flags.floorer.stops": [] });
+  expect(issues.find((i) => i.id === "stair-band").fix.data).toEqual({ _id: "st", elevation: { bottom: 0, top: 10, topInclusive: true } });
+});
+
+test("stair-openings and stair-stale-opening follow the active variant pair", () => {
+  expect(lint(statePlan("a")).find((i) => i.id === "stair-openings").fix.data._id).toBe("s3");
+  const off = lint(statePlan("b"));
+  expect(ids(off)).not.toContain("stair-openings");
+  expect(off.find((i) => i.id === "stair-stale-opening").fix.data._id).toBe("s2");
+});
+
+test("a stair with variants but no active state carries only its own level", () => {
+  const issues = lint(statePlan(null));
+  expect(issues.find((i) => i.id === "stair-levels").fix.data.levels).toEqual(["f1"]);
 });
 
 test("state-variant-missing flags a state with no entry and stays quiet when every state is covered", () => {

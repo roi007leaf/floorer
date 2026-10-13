@@ -2,14 +2,14 @@ import { FLAG_VERSION, INTENTS, ROLES, SETTINGS } from "../constants.js";
 import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
 import { movementActionKeys, stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
-import { activeStateId, addStateData, removeStateData, renameStateData, sceneStates, stateApplyUpdates, variantBehaviorData, variantsOf } from "../model/states.js";
+import { activeStateId, addStateData, removeStateData, renameStateData, sceneStates, variantBehaviorData, variantsOf } from "../model/states.js";
 import { footprintForLevel } from "./footprint.js";
 import { bandOf, buildFloorPlan, findLevel, isManaged, stairStops } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
 import { lint } from "../model/issues.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
 import { holeRemovalUpdates, stairRemovalUpdates, tracedHoleMirror } from "../model/holes.js";
-import { stairRetargetUpdates, stateOpeningUpdates } from "../model/stair-retarget.js";
+import { stairRetargetUpdates, stateApplyUpdates } from "../model/stair-retarget.js";
 import { levelRemovalPlan } from "../model/level-remove.js";
 import { view } from "../canvas/view.js";
 import { isSealed, sealUpdates } from "../model/visibility.js";
@@ -482,7 +482,7 @@ async function runBehaviorUpdates(scene, region, updates) {
   await journal.run({ op: "update", collection: "behaviors", scene, parent: region, before }, () => region.updateEmbeddedDocuments("RegionBehavior", updates));
 }
 
-async function applyOpeningUpdates(scene, updates) {
+async function applyRegionUpdates(scene, updates) {
   await runUpdates(scene, "regions", updates, updates.map((d) => docBefore(scene, "regions", d)));
 }
 
@@ -513,12 +513,14 @@ export async function removeState(scene, id) {
 }
 
 export async function applySceneState(scene, plan, stateId) {
-  await runSceneUpdate(scene, { "flags.floorer.activeState": stateId });
-  for (const { regionId, updates } of stateApplyUpdates(plan, stateId)) {
+  if (activeStateId(scene) !== stateId) await runSceneUpdate(scene, { "flags.floorer.activeState": stateId });
+  const { stairs, behaviors, surfaces } = stateApplyUpdates(plan, stateId);
+  await applyRegionUpdates(scene, stairs);
+  for (const { regionId, updates } of behaviors) {
     const region = scene.regions.get(regionId);
     if (region) await runBehaviorUpdates(scene, region, updates);
   }
-  await applyOpeningUpdates(scene, stateOpeningUpdates(plan, stateId));
+  await applyRegionUpdates(scene, surfaces);
 }
 
 function behaviorForState(region, stateId) {
@@ -536,12 +538,6 @@ async function retuneBehavior(scene, region, behavior, system) {
   await journal.run({ op: "update", collection: "behaviors", scene, parent: region, before }, () => region.updateEmbeddedDocuments("RegionBehavior", [{ _id: behavior.id, system }]));
 }
 
-async function reapplyStairTags(scene, stairId) {
-  const plan = buildFloorPlan(scene);
-  const wanted = ["stair-levels", "stair-band"];
-  for (const issue of lint(plan, lintOptions()).filter((i) => i.docId === stairId && wanted.includes(i.id))) await applyFix(scene, issue, plan);
-}
-
 export async function setStairVariant(scene, plan, stairId, stateId, variant) {
   const region = scene.regions.get(stairId);
   if (!region) return;
@@ -554,7 +550,7 @@ export async function setStairVariant(scene, plan, stairId, stateId, variant) {
   if (existing && !keep) await deleteBehaviors(scene, region, [existing]);
   if (keep) await retuneBehavior(scene, region, existing, data.system);
   else if (data) await createBehaviors(scene, region, [data]);
-  await reapplyStairTags(scene, stairId);
+  await applySceneState(scene, buildFloorPlan(scene), activeStateId(scene));
 }
 
 function arrivalRegionOf(scene, levelId) {

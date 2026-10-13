@@ -1,4 +1,4 @@
-import { activeStateId, addStateData, behaviorStateUpdates, missingVariantBehaviors, removeStateData, renameStateData, sceneStates, stateApplyUpdates, stateById, variantBehaviorData, variantLevelIds, variantsOf } from "../../scripts/model/states.js";
+import { activeStateId, addStateData, behaviorStateUpdates, missingVariantBehaviors, removeStateData, renameStateData, sceneStates, stateById, variantBehaviorData, variantStairs, variantsOf } from "../../scripts/model/states.js";
 
 const scene = (states, activeState) => ({ flags: { floorer: { states, activeState } } });
 const stair = (id, variants, behaviors = [], managed = true) => ({ id, behaviors, flags: { floorer: { role: "stair", managed, variants } } });
@@ -48,13 +48,11 @@ test("removing the active state moves active to the first remaining, or null", (
   expect(cleared).toEqual({ "flags.floorer.states": [], "flags.floorer.activeState": null });
 });
 
-test("variantsOf and variantLevelIds", () => {
+test("variantsOf tolerates missing flags", () => {
   expect(variantsOf(undefined)).toEqual({});
   expect(variantsOf({ flags: { floorer: {} } })).toEqual({});
-  const s = stair("st", { a: { kind: "level", levelId: "f2" }, b: { kind: "scene", sceneId: "sc", regionId: "rg" }, c: { kind: "off" }, d: { kind: "level" } });
+  const s = stair("st", { a: { kind: "level", levelId: "f2" }, b: { kind: "scene", sceneId: "sc", regionId: "rg" } });
   expect(variantsOf(s).a).toEqual({ kind: "level", levelId: "f2" });
-  expect(variantLevelIds(s)).toEqual(["f2"]);
-  expect(variantLevelIds(stair("st", {}))).toEqual([]);
 });
 
 test("variantBehaviorData builds changeLevel, teleportToken or nothing", () => {
@@ -96,12 +94,11 @@ test("behaviorStateUpdates disables every behavior when no state is active", () 
   expect(behaviorStateUpdates(s, null)).toEqual([{ _id: "b1", disabled: true }]);
 });
 
-test("stateApplyUpdates covers every managed stair with variants and skips the unchanged", () => {
-  const withVariants = stair("a", { s1: { kind: "level", levelId: "f2" } }, [beh("b1", "s1", true)]);
-  const legacy = stair("b", undefined, [beh("b2", null, false)]);
-  const settled = stair("c", { s1: { kind: "off" } }, [beh("b3", "s1", false)]);
-  const unmanaged = stair("d", { s1: { kind: "level", levelId: "f2" } }, [beh("b4", "s1", true)], false);
-  expect(stateApplyUpdates(planOf([withVariants, legacy, settled, unmanaged]), "s1")).toEqual([{ regionId: "a", updates: [{ _id: "b1", disabled: false }] }]);
+test("variantStairs keeps only the managed stairs that carry variants", () => {
+  const withVariants = stair("a", { s1: { kind: "level", levelId: "f2" } });
+  const legacy = stair("b", undefined);
+  const unmanaged = stair("d", { s1: { kind: "level", levelId: "f2" } }, [], false);
+  expect(variantStairs(planOf([withVariants, legacy, unmanaged])).map((s) => s.id)).toEqual(["a"]);
 });
 
 test("missingVariantBehaviors lists create data only for uncovered, non-off variants", () => {
