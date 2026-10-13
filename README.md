@@ -1,8 +1,18 @@
 # Floorer
 
+Guided builder for Foundry VTT v14 multi-level scenes. GM only.
+
 **Demo video:** [docs/floorer-demo.mp4](docs/floorer-demo.mp4) — setup from floor images, traced floors, holes mirrored below, outline walls, stairs, token level change, sight through openings, lint fixes, undo.
 
-Guided builder for Foundry VTT v14 multi-level scenes. GM only.
+## Install
+
+Foundry → Add-on Modules → Install Module → paste this manifest URL:
+
+```
+https://raw.githubusercontent.com/roi007leaf/floorer/main/module.json
+```
+
+Requires Foundry VTT v14. This URL always points at the newest build, including alphas, so Foundry detects updates.
 
 ## Workflow
 

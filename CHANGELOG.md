@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0-alpha.3
+
+- Update checks work again: the manifest URL now points at the manifest on `main` instead of `releases/latest`, which GitHub does not resolve for pre-releases (it returned 404, so Foundry could never see a new version).
+
+**Testers on alpha.1 or alpha.2 must reinstall once** with the URL below; after that, updates show up in Foundry normally.
+
 ## 1.0.0-alpha.2
 
 - Re-running Whole map / drawing a footprint replaces the level's surface instead of adding a second one; new surface-duplicate lint with one-click delete.

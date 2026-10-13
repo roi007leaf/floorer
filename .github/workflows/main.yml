@@ -2,7 +2,7 @@ name: Floorer CI & Release
 
 env:
   project_url: 'https://github.com/${{ github.repository }}'
-  latest_manifest_url: 'https://github.com/${{ github.repository }}/releases/latest/download/module.json'
+  latest_manifest_url: 'https://raw.githubusercontent.com/${{ github.repository }}/main/module.json'
   release_module_url: 'https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/floorer.zip'
 
 on:
