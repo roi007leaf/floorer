@@ -1,8 +1,8 @@
-import { bandOf, findLevel, finiteOrNull, isManaged, orderPair, stairStops as flagStairStops, surfaceLevels } from "./floor-plan.js";
+import { bandOf, findLevel, finiteOrNull, isManaged, stairStops as flagStairStops, surfaceLevels } from "./floor-plan.js";
 import { holeAppendData, removeHolesData } from "./holes.js";
 import { bandChangeUpdates, bandGaps } from "./band-edit.js";
-import { activeStair, stairOpeningShapes, stairOpeningUpdates, stairSurfaces } from "./stair-retarget.js";
-import { movementActionKeys, stairBandFor, stairLevelTags, stairStops } from "./regions.js";
+import { activeStairPlan, openingUpdatesFor, stairOpeningShapes, stairSurfacesFor } from "./stair-retarget.js";
+import { movementActionKeys } from "./regions.js";
 import { activeStateId, missingVariantBehaviors, sceneStates, variantsOf } from "./states.js";
 
 export function sameSet(a, b) {
@@ -85,14 +85,10 @@ function staleOpeningRemovals(plan, tags, stairId) {
 function stairIssues(entry, plan, activeId) {
   return entry.stairs.flatMap((stair) => {
     if (!isManaged(stair)) return [];
-    const active = activeStair(plan, stair, activeId);
-    const target = findLevel(plan, active.flags.floorer.targetLevelId);
-    if (!target) return [issue("stair-target-missing", entry.level.id, stair.id, { prompt: "stair-target", docId: stair.id })];
-    const { lower, upper } = orderPair(entry.level, target.level);
-    const stops = stairStops(plan, lower, upper, stair.shapes);
+    const config = activeStairPlan(plan, stair, activeId);
+    if (!config) return [issue("stair-target-missing", entry.level.id, stair.id, { prompt: "stair-target", docId: stair.id })];
+    const { levels: tags, band, stops } = config;
     const out = [];
-    const tags = stairLevelTags(lower, upper, stops);
-    const band = stairBandFor(lower, upper);
     if (!sameSet(stair.levels, tags) || !sameSet(flagStairStops(stair), stops)) {
       const removals = staleOpeningRemovals(plan, tags, stair.id);
       out.push(issue("stair-levels", entry.level.id, stair.id, updateFix([stairTagData(stair, tags, stops), ...removals])));
@@ -105,12 +101,9 @@ function stairIssues(entry, plan, activeId) {
 function staleOpeningIssues(entry, plan, activeId) {
   return entry.stairs.flatMap((stair) => {
     if (!isManaged(stair)) return [];
-    const target = findLevel(plan, activeStair(plan, stair, activeId).flags.floorer.targetLevelId);
-    if (!target) return [];
-    const { lower, upper } = orderPair(entry.level, target.level);
-    const stops = stairStops(plan, lower, upper, stair.shapes);
-    const tags = stairLevelTags(lower, upper, stops);
-    const removals = staleOpeningRemovals(plan, tags, stair.id);
+    const config = activeStairPlan(plan, stair, activeId);
+    if (!config) return [];
+    const removals = staleOpeningRemovals(plan, config.levels, stair.id);
     return removals.length ? [issue("stair-stale-opening", entry.level.id, stair.id, updateFix(removals))] : [];
   });
 }
@@ -122,18 +115,19 @@ function missingOpenings(surfaces, holes, stair) {
   return surfaces.flatMap((s, i) => (holes[i] ? [] : [holeAppendData(s, shapes, { mirrorOf: origin ? shapes.map(() => origin.id) : undefined, extra })]));
 }
 
-function stairOpeningFix(stair, plan) {
-  const surfaces = stairSurfaces(plan, stair);
+function stairOpeningFix(plan, stair, ids) {
+  const surfaces = stairSurfacesFor(plan, ids);
   const holes = surfaces.map((s) => stairHoleFor(s, stair.id));
   if (!surfaces.length || holes.every(Boolean)) return null;
-  if (holes.every((h) => !h)) return updateFix(stairOpeningUpdates(plan, stair));
+  if (holes.every((h) => !h)) return updateFix(openingUpdatesFor(plan, stair, ids));
   return updateFix(missingOpenings(surfaces, holes, stair));
 }
 
 function stairOpeningIssues(entry, plan, activeId) {
   return entry.stairs.flatMap((stair) => {
     if (!isManaged(stair)) return [];
-    const fix = stairOpeningFix(activeStair(plan, stair, activeId), plan);
+    const config = activeStairPlan(plan, stair, activeId);
+    const fix = config ? stairOpeningFix(plan, stair, config.ids) : null;
     return fix ? [issue("stair-openings", entry.level.id, stair.id, fix)] : [];
   });
 }

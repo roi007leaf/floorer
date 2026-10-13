@@ -33,6 +33,12 @@ export function removeStateData(scene, id) {
   return { ...data, "flags.floorer.activeState": states[0]?.id ?? null };
 }
 
+export function variantTargetLevelIds(stair) {
+  return Object.values(variantsOf(stair))
+    .filter((v) => v?.kind === "level" && v.levelId)
+    .map((v) => v.levelId);
+}
+
 export function variantsOf(stair) {
   return stair?.flags?.floorer?.variants ?? {};
 }

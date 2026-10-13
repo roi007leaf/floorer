@@ -138,22 +138,48 @@ test("stateApplyUpdates leaves stairs without variants alone", () => {
   expect(stateApplyUpdates(planWith([S("f1"), S("f2"), stair("f1", "f2")]), "s1")).toEqual({ stairs: [], behaviors: [], surfaces: [] });
 });
 
-test("the active level variant sets the stair's tags, band and stops and cuts that pair's openings", () => {
+test("the active level variant sets the stair's tags, band, stops and target and cuts that pair's openings", () => {
   const st = vstair("st", { s1: { kind: "level", levelId: "f3" } });
   const out = stateApplyUpdates(planWith([S("f1"), S("f2"), S("f3"), st]), "s1");
-  expect(out.stairs).toEqual([{ _id: "st", levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30, topInclusive: true }, "flags.floorer.stops": ["f2"] }]);
+  expect(out.stairs).toEqual([{ _id: "st", levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30, topInclusive: true }, "flags.floorer.targetLevelId": "f3", "flags.floorer.stops": ["f2"] }]);
   expect(out.surfaces.map((u) => u._id)).toEqual(["f3", "f2", "f1"]);
   for (const u of out.surfaces) expect(u.shapes).toEqual([rect, paddedOpening]);
 });
 
+test("another variant's level is never a stop of the active pair", () => {
+  const st = vstair("st", { s1: { kind: "level", levelId: "f3" }, s2: { kind: "level", levelId: "f2" } });
+  const out = stateApplyUpdates(planWith([S("f1"), S("f2"), S("f3"), st]), "s1");
+  expect(out.stairs[0]).toMatchObject({ levels: ["f1", "f3"], "flags.floorer.stops": [], "flags.floorer.targetLevelId": "f3" });
+  expect(out.surfaces.map((u) => u._id)).toEqual(["f3", "f1"]);
+});
+
 test("an off or cross-scene variant leaves the stair tagged to its own level with no climb", () => {
   const st = vstair("st", { s1: { kind: "off" }, s2: { kind: "scene", sceneId: "sc", regionId: "rg" } });
-  const own = { _id: "st", levels: ["f1"], elevation: { bottom: 0, top: 10, topInclusive: true }, "flags.floorer.stops": [] };
+  const own = { _id: "st", levels: ["f1"], elevation: { bottom: 0, top: 10, topInclusive: true }, "flags.floorer.targetLevelId": "f1", "flags.floorer.stops": [] };
   for (const activeId of ["s1", "s2", null]) {
     const out = stateApplyUpdates(planWith([S("f1"), S("f2"), S("f3"), st]), activeId);
     expect(out.stairs).toEqual([own]);
     expect(out.surfaces.map((u) => u._id)).toEqual(["f1"]);
   }
+});
+
+test("stored stops and target left by another variant cannot make the update look settled", () => {
+  const variants = { s1: { kind: "level", levelId: "f3" }, s2: { kind: "level", levelId: "f2" } };
+  const st = vstair("st", variants, { target: "f2", levels: ["f1", "f2", "f3"], elevation: { bottom: 0, top: 30, topInclusive: true }, stops: ["f2"] });
+  const out = stateApplyUpdates(planWith([S("f1"), S("f2"), S("f3"), st]), "s1");
+  expect(out.stairs).toEqual([{ _id: "st", levels: ["f1", "f3"], elevation: { bottom: 0, top: 30, topInclusive: true }, "flags.floorer.targetLevelId": "f3", "flags.floorer.stops": [] }]);
+});
+
+test("switching between two level variants yields exactly one stair update each way", () => {
+  const variants = { s1: { kind: "level", levelId: "f3" }, s2: { kind: "level", levelId: "f2" } };
+  const toF3 = vstair("st", variants, { target: "f2", levels: ["f1", "f2"], elevation: { bottom: 0, top: 20, topInclusive: true } });
+  const up = stateApplyUpdates(planWith([S("f1"), S("f2"), S("f3"), toF3]), "s1");
+  expect(up.stairs).toHaveLength(1);
+  expect(up.stairs[0]).toMatchObject({ levels: ["f1", "f3"], "flags.floorer.targetLevelId": "f3" });
+  const toF2 = vstair("st", variants, { target: "f3", levels: ["f1", "f3"], elevation: { bottom: 0, top: 30, topInclusive: true } });
+  const down = stateApplyUpdates(planWith([S("f1"), S("f2"), S("f3"), toF2]), "s2");
+  expect(down.stairs).toHaveLength(1);
+  expect(down.stairs[0]).toMatchObject({ levels: ["f1", "f2"], "flags.floorer.targetLevelId": "f2" });
 });
 
 test("switching away from a level variant strips the openings it left behind", () => {
@@ -170,9 +196,15 @@ test("switching away from a level variant strips the openings it left behind", (
   expect(own.shapes).toEqual([rect, paddedOpening]);
 });
 
-test("a stair already tagged for the active variant yields no region update", () => {
-  const st = vstair("st", { s1: { kind: "level", levelId: "f3" } }, { levels: ["f3", "f2", "f1"], elevation: { bottom: 0, top: 30, topInclusive: true }, stops: ["f2"] });
-  expect(stateApplyUpdates(planWith([S("f1"), S("f2"), S("f3"), st]), "s1").stairs).toEqual([]);
+test("re-applying the state a stair is already in yields no stair and no surface update", () => {
+  const openings = [{ id: "u", stairId: "st" }];
+  const f3 = S("f3", openings, [paddedOpening]);
+  const f2 = S("f2", [{ id: "m", stairId: "st", mirrorOf: "u" }], [paddedOpening]);
+  const f1 = S("f1", [{ id: "l", stairId: "st", mirrorOf: "u" }], [paddedOpening]);
+  const st = vstair("st", { s1: { kind: "level", levelId: "f3" } }, { target: "f3", levels: ["f3", "f2", "f1"], elevation: { bottom: 0, top: 30, topInclusive: true }, stops: ["f2"] });
+  const out = stateApplyUpdates(planWith([f1, f2, f3, st]), "s1");
+  expect(out.stairs).toEqual([]);
+  expect(out.surfaces).toEqual([]);
 });
 
 test("stateApplyUpdates carries the behavior toggles and skips the stairs whose behaviors already match", () => {

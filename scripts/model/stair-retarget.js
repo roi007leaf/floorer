@@ -2,7 +2,7 @@ import { findLevel, isManaged, orderPair, stairStops as flagStops } from "./floo
 import { holeAppendData, stairRemovalUpdates, stairsRemovalUpdates } from "./holes.js";
 import { padShape, STAIR_OPENING_PAD } from "./shapes.js";
 import { stairBandFor, stairLevelTags, stairStops } from "./regions.js";
-import { behaviorStateUpdates, hasVariants, variantStairs, variantsOf } from "./states.js";
+import { behaviorStateUpdates, hasVariants, variantStairs, variantTargetLevelIds, variantsOf } from "./states.js";
 
 function findStair(plan, stairId) {
   return plan.levels.flatMap((e) => e.stairs).find((s) => s.id === stairId) ?? null;
@@ -44,16 +44,19 @@ export function stairPair(plan, stair) {
   return own && target ? orderPair(own, target) : null;
 }
 
+export function stairSurfacesFor(plan, ids, removals = []) {
+  return ids
+    .map((id) => managedSurface(findLevel(plan, id), removals))
+    .filter(Boolean)
+    .reverse();
+}
+
 export function stairSurfaces(plan, stair, removals = []) {
   const pair = stairPair(plan, stair);
   if (!pair) return [];
   const { lower, upper } = pair;
   const stops = stairStops(planAfterRemoval(plan, removals), lower, upper, stair.shapes);
-  const ids = [...new Set([lower.id, ...stops, upper.id])];
-  return ids
-    .map((id) => managedSurface(findLevel(plan, id), removals))
-    .filter(Boolean)
-    .reverse();
+  return stairSurfacesFor(plan, [...new Set([lower.id, ...stops, upper.id])], removals);
 }
 
 export function stairOpeningShapes(stair) {
@@ -101,6 +104,38 @@ export function activeStair(plan, stair, activeId) {
   return withTarget(stair, target);
 }
 
+function otherVariantLevels(stair, lower, upper) {
+  const ends = new Set([lower.id, upper.id]);
+  return new Set(variantTargetLevelIds(stair).filter((id) => !ends.has(id)));
+}
+
+function activeStops(plan, stair, lower, upper) {
+  const bare = planAfterRemoval(plan, stairRemovalUpdates(plan, stair.id));
+  const stops = stairStops(bare, lower, upper, stair.shapes);
+  if (!hasVariants(stair)) return stops;
+  const others = otherVariantLevels(stair, lower, upper);
+  return stops.filter((id) => !others.has(id));
+}
+
+export function activeStairPlan(plan, stair, activeId) {
+  const active = activeStair(plan, stair, activeId);
+  const pair = stairPair(plan, active);
+  if (!pair) return null;
+  const { lower, upper } = pair;
+  const stops = activeStops(plan, stair, lower, upper);
+  return {
+    stops,
+    targetLevelId: active.flags.floorer.targetLevelId,
+    ids: [...new Set([lower.id, ...stops, upper.id])],
+    levels: stairLevelTags(lower, upper, stops),
+    band: stairBandFor(lower, upper),
+  };
+}
+
+export function openingUpdatesFor(plan, stair, ids, removals = []) {
+  return additions(stairSurfacesFor(plan, ids, removals), stairOpeningShapes(stair), { stairId: stair.id });
+}
+
 function strip(update) {
   const { ids, removed, ...rest } = update;
   return rest;
@@ -120,27 +155,49 @@ function sameBand(a, b) {
   return a?.bottom === b.bottom && a?.top === b.top && a?.topInclusive === b.topInclusive;
 }
 
-function stairPairData(plan, stair, removals) {
-  const pair = stairPair(plan, stair);
-  if (!pair) return null;
-  const { lower, upper } = pair;
-  const stops = stairStops(planAfterRemoval(plan, removals), lower, upper, stair.shapes);
+function pairData(stair, config) {
   return {
     _id: stair.id,
-    levels: stairLevelTags(lower, upper, stops),
-    elevation: { ...stairBandFor(lower, upper), topInclusive: true },
-    "flags.floorer.stops": stops,
+    levels: config.levels,
+    elevation: { ...config.band, topInclusive: true },
+    "flags.floorer.targetLevelId": config.targetLevelId,
+    "flags.floorer.stops": config.stops,
   };
 }
 
 function settled(stair, data) {
-  return sameIds(Array.from(stair.levels ?? []), data.levels) && sameBand(stair.elevation, data.elevation) && sameIds(flagStops(stair), data["flags.floorer.stops"]);
+  const flag = stair.flags.floorer;
+  return sameIds(Array.from(stair.levels ?? []), data.levels) && sameBand(stair.elevation, data.elevation) && sameIds(flagStops(stair), data["flags.floorer.stops"]) && flag.targetLevelId === data["flags.floorer.targetLevelId"];
 }
 
-function stairPairUpdate(plan, stair, removals) {
-  const data = stairPairData(plan, stair, removals);
-  if (!data || settled(stair, data)) return null;
-  return data;
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((k) => [k, canonical(value[k])]));
+  return value;
+}
+
+function same(a, b) {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
+function plain(shape) {
+  return typeof shape?.toObject === "function" ? shape.toObject() : shape;
+}
+
+function holeKey(hole) {
+  return { stairId: hole.stairId ?? null, traced: hole.traced ?? null };
+}
+
+function surfaceUnchanged(surface, update) {
+  if (!surface) return false;
+  const shapes = Array.from(surface.shapes ?? []).map(plain);
+  const holes = (surface.flags?.floorer?.holes ?? []).map(holeKey);
+  return same(shapes, update.shapes) && same(holes, update["flags.floorer.holes"].map(holeKey));
+}
+
+function managedSurfacesById(plan) {
+  const pairs = plan.levels.map((e) => e.surface).filter((s) => s && isManaged(s)).map((s) => [s.id, s]);
+  return new Map(pairs);
 }
 
 export function stateApplyUpdates(plan, activeId) {
@@ -150,10 +207,12 @@ export function stateApplyUpdates(plan, activeId) {
   let surfaces = stairsRemovalUpdates(plan, stairs.map((s) => s.id)).map(strip);
   const regions = [];
   for (const stair of stairs) {
-    const active = activeStair(plan, stair, activeId);
-    const update = stairPairUpdate(plan, active, surfaces);
-    if (update) regions.push(update);
-    for (const addition of stairOpeningUpdates(plan, active, surfaces)) surfaces = mergeUpdate(surfaces, addition);
+    const config = activeStairPlan(plan, stair, activeId);
+    if (!config) continue;
+    const data = pairData(stair, config);
+    if (!settled(stair, data)) regions.push(data);
+    for (const addition of openingUpdatesFor(plan, stair, config.ids, surfaces)) surfaces = mergeUpdate(surfaces, addition);
   }
-  return { stairs: regions, behaviors, surfaces };
+  const docs = managedSurfacesById(plan);
+  return { stairs: regions, behaviors, surfaces: surfaces.filter((u) => !surfaceUnchanged(docs.get(u._id), u)) };
 }
