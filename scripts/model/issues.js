@@ -3,7 +3,7 @@ import { holeAppendData, removeHolesData } from "./holes.js";
 import { bandChangeUpdates, bandGaps } from "./band-edit.js";
 import { stairOpeningShapes, stairOpeningUpdates, stairSurfaces } from "./stair-retarget.js";
 import { movementActionKeys, stairBandFor, stairLevelTags, stairStops, stairVariantLevels } from "./regions.js";
-import { missingVariantBehaviors, sceneStates, variantsOf } from "./states.js";
+import { hasVariants, missingVariantBehaviors, sceneStates, variantsOf } from "./states.js";
 
 export function sameSet(a, b) {
   const sa = new Set(a);
@@ -132,7 +132,7 @@ function stairOpeningFix(stair, plan) {
 
 function stairOpeningIssues(entry, plan) {
   return entry.stairs.flatMap((stair) => {
-    if (!isManaged(stair)) return [];
+    if (!isManaged(stair) || hasVariants(stair)) return [];
     const fix = stairOpeningFix(stair, plan);
     return fix ? [issue("stair-openings", entry.level.id, stair.id, fix)] : [];
   });

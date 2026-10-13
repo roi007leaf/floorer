@@ -77,9 +77,14 @@ function removeAcross(plan, predicate) {
     .filter(Boolean);
 }
 
+export function stairsRemovalUpdates(plan, stairIds) {
+  const stairs = new Set(stairIds);
+  const ids = new Set(managedSurfaces(plan).flatMap(holesOf).filter((h) => stairs.has(h.stairId)).map((h) => h.id));
+  return removeAcross(plan, (h) => stairs.has(h.stairId) || ids.has(h.mirrorOf));
+}
+
 export function stairRemovalUpdates(plan, stairId) {
-  const ids = new Set(managedSurfaces(plan).flatMap(holesOf).filter((h) => h.stairId === stairId).map((h) => h.id));
-  return removeAcross(plan, (h) => h.stairId === stairId || ids.has(h.mirrorOf));
+  return stairsRemovalUpdates(plan, [stairId]);
 }
 
 export function holeRemovalUpdates(plan, holeId) {

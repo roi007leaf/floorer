@@ -9,7 +9,7 @@ import { bandChangeUpdates } from "../model/band-edit.js";
 import { lint } from "../model/issues.js";
 import { shapeCenter, shapeSummary } from "../model/shapes.js";
 import { holeRemovalUpdates, stairRemovalUpdates, tracedHoleMirror } from "../model/holes.js";
-import { stairRetargetUpdates } from "../model/stair-retarget.js";
+import { stairRetargetUpdates, stateOpeningUpdates } from "../model/stair-retarget.js";
 import { levelRemovalPlan } from "../model/level-remove.js";
 import { view } from "../canvas/view.js";
 import { isSealed, sealUpdates } from "../model/visibility.js";
@@ -475,6 +475,10 @@ async function runBehaviorUpdates(scene, region, updates) {
   await journal.run({ op: "update", collection: "behaviors", scene, parent: region, before }, () => region.updateEmbeddedDocuments("RegionBehavior", updates));
 }
 
+async function applyOpeningUpdates(scene, updates) {
+  await runUpdates(scene, "regions", updates, updates.map((d) => docBefore(scene, "regions", d)));
+}
+
 export async function applySceneState(scene, plan, stateId) {
   const before = { "flags.floorer.activeState": activeStateId(scene) };
   await journal.run({ op: "update", collection: "scene", scene, before }, () => scene.update({ "flags.floorer.activeState": stateId }));
@@ -482,6 +486,7 @@ export async function applySceneState(scene, plan, stateId) {
     const region = scene.regions.get(regionId);
     if (region) await runBehaviorUpdates(scene, region, updates);
   }
+  await applyOpeningUpdates(scene, stateOpeningUpdates(plan, stateId));
 }
 
 function behaviorForState(region, stateId) {

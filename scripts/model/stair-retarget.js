@@ -1,7 +1,8 @@
 import { findLevel, isManaged, orderPair } from "./floor-plan.js";
-import { holeAppendData, stairRemovalUpdates } from "./holes.js";
+import { holeAppendData, stairRemovalUpdates, stairsRemovalUpdates } from "./holes.js";
 import { padShape, STAIR_OPENING_PAD } from "./shapes.js";
 import { stairBandFor, stairLevelTags, stairStops, stairVariantLevels } from "./regions.js";
+import { hasVariants, variantsOf } from "./states.js";
 
 function findStair(plan, stairId) {
   return plan.levels.flatMap((e) => e.stairs).find((s) => s.id === stairId) ?? null;
@@ -85,4 +86,51 @@ export function stairRetargetUpdates(plan, stairId, fromLevelId, newTargetLevelI
     surfaceRemovals,
     surfaceAdditions: stairOpeningUpdates(plan, nextStair, surfaceRemovals),
   };
+}
+
+function withTarget(stair, targetLevelId) {
+  const floorer = { ...stair.flags.floorer, targetLevelId };
+  return { ...stair, id: stair.id, shapes: stair.shapes, flags: { ...stair.flags, floorer } };
+}
+
+function strip(update) {
+  const { ids, removed, ...rest } = update;
+  return rest;
+}
+
+function mergeUpdate(list, update) {
+  const next = strip(update);
+  return [...list.filter((u) => u._id !== next._id), next];
+}
+
+function variantStairs(plan) {
+  return plan.levels.flatMap((e) => e.stairs).filter((stair) => isManaged(stair) && hasVariants(stair));
+}
+
+function ownOpening(plan, stair, applied) {
+  const surface = managedSurface(findLevel(plan, stair.flags.floorer.levelId), applied);
+  return surface ? [holeAppendData(surface, stairOpeningShapes(stair), { extra: { stairId: stair.id } })] : [];
+}
+
+function activeTargetId(plan, stair, activeId) {
+  const variant = variantsOf(stair)[activeId];
+  if (variant?.kind !== "level" || !variant.levelId) return null;
+  if (variant.levelId === stair.flags.floorer.levelId || !findLevel(plan, variant.levelId)) return null;
+  return variant.levelId;
+}
+
+function variantOpenings(plan, stair, activeId, applied) {
+  const targetId = activeTargetId(plan, stair, activeId);
+  if (!targetId) return ownOpening(plan, stair, applied);
+  return stairOpeningUpdates(plan, withTarget(stair, targetId), applied);
+}
+
+export function stateOpeningUpdates(plan, activeId) {
+  const stairs = variantStairs(plan);
+  if (!stairs.length) return [];
+  let updates = stairsRemovalUpdates(plan, stairs.map((s) => s.id)).map(strip);
+  for (const stair of stairs) {
+    for (const update of variantOpenings(plan, stair, activeId, updates)) updates = mergeUpdate(updates, update);
+  }
+  return updates;
 }

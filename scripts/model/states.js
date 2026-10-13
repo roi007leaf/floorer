@@ -70,7 +70,7 @@ function behaviorStateId(behavior) {
   return behavior.flags?.floorer?.stateId ?? null;
 }
 
-function hasVariants(stair) {
+export function hasVariants(stair) {
   return variantEntries(stair).length > 0;
 }
 
