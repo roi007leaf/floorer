@@ -2,7 +2,7 @@ import { FLAG_VERSION, INTENTS, ROLES, SETTINGS } from "../constants.js";
 import { EMBEDDED_NAMES, journal } from "../journal/journal.js";
 import { intents } from "../canvas/intents.js";
 import { movementActionKeys, stairIndexUpdates, surfaceCreateData } from "../model/regions.js";
-import { activeStateId, stateApplyUpdates, variantBehaviorData, variantsOf } from "../model/states.js";
+import { activeStateId, addStateData, removeStateData, renameStateData, sceneStates, stateApplyUpdates, variantBehaviorData, variantsOf } from "../model/states.js";
 import { footprintForLevel } from "./footprint.js";
 import { bandOf, buildFloorPlan, findLevel, isManaged, stairStops } from "../model/floor-plan.js";
 import { bandChangeUpdates } from "../model/band-edit.js";
@@ -186,10 +186,17 @@ function isInfo(issue) {
   return issue.severity === "info";
 }
 
+function stateItems(scene) {
+  const active = activeStateId(scene);
+  return sceneStates(scene).map((s) => ({ id: s.id, name: s.name, active: s.id === active }));
+}
+
 export function panelContext(plan, { activeLevelId, issues, intent, journalSize, editingBandId = null, bandDraft = null, expanded = null }) {
   const decorated = issues.map((i) => ({ ...i, fixable: !!i.fix, key: issueKey(i) }));
   return {
     sceneName: plan.scene?.name ?? "",
+    states: stateItems(plan.scene),
+    activeStateId: activeStateId(plan.scene),
     rows: plan.levels.map((e) => row(e, plan, activeLevelId, decorated, { editingBandId, bandDraft, expanded })).reverse(),
     issues: decorated,
     issueCount: decorated.filter((i) => !isInfo(i)).length,
@@ -205,7 +212,7 @@ function elevationBefore(doc) {
   return { ...bandOf(doc), ...(inclusive === undefined ? {} : { topInclusive: inclusive }) };
 }
 
-function plainShapes(doc) {
+export function plainShapes(doc) {
   return Array.from(doc.shapes ?? []).map((sh) => (typeof sh.toObject === "function" ? sh.toObject() : foundry.utils.deepClone(sh)));
 }
 
@@ -479,9 +486,34 @@ async function applyOpeningUpdates(scene, updates) {
   await runUpdates(scene, "regions", updates, updates.map((d) => docBefore(scene, "regions", d)));
 }
 
+function sceneBefore(scene, data) {
+  const before = {};
+  for (const key of Object.keys(data)) before[key] = foundry.utils.deepClone(foundry.utils.getProperty(scene, key) ?? null);
+  return before;
+}
+
+async function runSceneUpdate(scene, data) {
+  await journal.run({ op: "update", collection: "scene", scene, before: sceneBefore(scene, data) }, () => scene.update(data));
+}
+
+export async function addState(scene, name) {
+  const trimmed = name?.trim();
+  if (trimmed) await runSceneUpdate(scene, addStateData(scene, trimmed));
+}
+
+export async function renameState(scene, id, name) {
+  const trimmed = name?.trim();
+  if (trimmed) await runSceneUpdate(scene, renameStateData(scene, id, trimmed));
+}
+
+export async function removeState(scene, id) {
+  const { ["flags.floorer.activeState"]: nextActive, ...states } = removeStateData(scene, id);
+  await runSceneUpdate(scene, states);
+  if (nextActive !== undefined) await applySceneState(scene, buildFloorPlan(scene), nextActive);
+}
+
 export async function applySceneState(scene, plan, stateId) {
-  const before = { "flags.floorer.activeState": activeStateId(scene) };
-  await journal.run({ op: "update", collection: "scene", scene, before }, () => scene.update({ "flags.floorer.activeState": stateId }));
+  await runSceneUpdate(scene, { "flags.floorer.activeState": stateId });
   for (const { regionId, updates } of stateApplyUpdates(plan, stateId)) {
     const region = scene.regions.get(regionId);
     if (region) await runBehaviorUpdates(scene, region, updates);

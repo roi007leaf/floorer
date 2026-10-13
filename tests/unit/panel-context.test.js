@@ -192,3 +192,16 @@ test("panelContext counts outline walls per level", () => {
   const ctx = panelContext(plan, { activeLevelId: "f1", issues: [], intent: null, journalSize: 0 });
   expect(ctx.rows.map((r) => r.wallCount)).toEqual([1, 2]);
 });
+
+test("panelContext exposes the scene states with the active one marked", () => {
+  const scene = { levels: [L("f1", 0, 10, ["f1"])], regions: [], flags: { floorer: { states: [{ id: "s1", name: "Upright" }, { id: "s2", name: "Rolled" }], activeState: "s2" } } };
+  const ctx = panelContext(buildFloorPlan(scene), { activeLevelId: "f1", issues: [], intent: null, journalSize: 0 });
+  expect(ctx.states).toEqual([{ id: "s1", name: "Upright", active: false }, { id: "s2", name: "Rolled", active: true }]);
+  expect(ctx.activeStateId).toBe("s2");
+});
+
+test("panelContext reports no states for a scene without them", () => {
+  const ctx = panelContext(buildFloorPlan({ levels: [L("f1", 0, 10, ["f1"])], regions: [] }), { activeLevelId: "f1", issues: [], intent: null, journalSize: 0 });
+  expect(ctx.states).toEqual([]);
+  expect(ctx.activeStateId).toBeNull();
+});

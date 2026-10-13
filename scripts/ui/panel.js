@@ -8,12 +8,14 @@ import { autotag } from "../canvas/autotag.js";
 import { view } from "../canvas/view.js";
 import { getSetting, setSetting } from "../settings.js";
 import { SetupDialog } from "./setup-dialog.js";
-import { adoptLevel, applyBandChange, applyFix, applySeal, armDraw, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, lintOptions, locateHole, locateRegion, panelContext, removeLevel, removeLevelWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
+import { StatesDialog } from "./states-dialog.js";
+import { VariantsDialog } from "./variants-dialog.js";
+import { adoptLevel, applyBandChange, applyFix, applySceneState, applySeal, armDraw, assignStairIndices, buildOutlineWalls, deleteHole, deleteStair, issueKey, lintOptions, locateHole, locateRegion, panelContext, removeLevel, removeLevelWalls, renameLevel, retargetStair, wholeSceneSurface } from "./panel-actions.js";
 import { parseBand } from "../model/band-edit.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
-const RERENDER_HOOKS = ["createRegion", "updateRegion", "deleteRegion", "createLevel", "updateLevel", "deleteLevel", "floorer.levelsChanged", "activateSceneControls"];
+const RERENDER_HOOKS = ["createRegion", "updateRegion", "deleteRegion", "createLevel", "updateLevel", "deleteLevel", "floorer.levelsChanged", "floorer.statesChanged", "activateSceneControls"];
 
 export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static #instance = null;
@@ -31,6 +33,8 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 520, height: "auto" },
     actions: {
       setup: FloorerPanel.#onSetup,
+      manageStates: FloorerPanel.#onManageStates,
+      editVariants: FloorerPanel.#onEditVariants,
       activate: FloorerPanel.#onActivate,
       drawFootprint: FloorerPanel.#onDraw,
       wholeScene: FloorerPanel.#onWholeScene,
@@ -115,6 +119,7 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     this.#bindBandEditor();
     this.#bindStairTargets();
+    this.#bindStateSwitch();
     this.#paintSwatches();
     this.#bindStairHover();
     this.#ensureStairIndices();
@@ -141,6 +146,16 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   async #retargetStair(select) {
     const { regionId, levelId } = select.dataset;
     await retargetStair(canvas.scene, this.plan, regionId, levelId, select.value);
+    this.render();
+  }
+
+  #bindStateSwitch() {
+    const select = this.element.querySelector('select[data-action="switchState"]');
+    select?.addEventListener("change", () => this.#switchState(select.value));
+  }
+
+  async #switchState(stateId) {
+    await applySceneState(canvas.scene, this.plan, stateId);
     this.render();
   }
 
@@ -292,6 +307,14 @@ export class FloorerPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #onSetup() {
     new SetupDialog().render(true);
+  }
+
+  static #onManageStates() {
+    new StatesDialog().render(true);
+  }
+
+  static #onEditVariants(_event, target) {
+    new VariantsDialog({ stairId: target.dataset.regionId }).render(true);
   }
 
   static async #onActivate(_event, target) {

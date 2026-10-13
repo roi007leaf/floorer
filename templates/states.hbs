@@ -1,0 +1,23 @@
+<div class="floorer-states-body">
+  <p class="hint">{{localize "FLOORER.States.Hint"}}</p>
+  {{#if rows.length}}
+  <ul class="state-rows">
+    {{#each rows}}
+    <li class="state-row" data-state-id="{{id}}">
+      <input type="radio" name="active-state" value="{{id}}" data-action="activateState" data-state-id="{{id}}" {{#if active}}checked{{/if}} data-tooltip="{{localize 'FLOORER.States.Tip.Active'}}">
+      <input type="text" class="state-name" value="{{name}}" data-state-id="{{id}}" data-tooltip="{{localize 'FLOORER.States.Tip.Name'}}">
+      <button type="button" class="icon danger" data-action="removeState" data-state-id="{{id}}" data-tooltip="{{localize 'FLOORER.States.Delete'}}"><i class="fas fa-trash"></i></button>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="empty">{{localize "FLOORER.States.Empty"}}</p>
+  {{/if}}
+  <div class="add-state">
+    <input type="text" name="new-state" placeholder="{{localize 'FLOORER.States.AddPlaceholder'}}">
+    <button type="button" data-action="addState"><i class="fas fa-plus"></i>{{localize "FLOORER.States.Add"}}</button>
+  </div>
+  <footer class="form-footer">
+    <button type="button" data-action="cancel">{{localize "FLOORER.Common.Close"}}</button>
+  </footer>
+</div>

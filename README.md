@@ -24,6 +24,14 @@ Requires Foundry VTT v14. This URL always points at the newest build, including 
 6. **Walls** builds wall segments along the active floor's outline (outer edge and holes), tagged to that level only; traced floors get them automatically when the setting is on. Re-run after changing the footprint.
 7. While the panel is open, **Dim other floors** fades placeables that belong to other levels, and new walls, tiles, sounds and notes are tagged to the active level. Lights get elevation only so light spills through openings.
 
+### Scene states
+
+A scene state is one configuration of the scene, and each stair can lead somewhere different in each state. Open **Scene states** from the panel header to add states, rename them and pick the active one; the header then shows a switcher.
+
+On a stair's row in the level details, the branch button sets that stair's destination per state: **Off**, another **Level** in this scene, or **Another scene** (pick the scene, the level in it and where the token lands). Choosing another scene copies the stair's own shape into that scene as a landing region, so tokens arrive on the matching spot.
+
+The airship case: build the hull once, add states *Upright*, *Rolled to port* and *Docked*. The companionway stair leads to the upper deck while upright, to the opposite deck once rolled, and to the quayside scene while docked. Switching the state retargets every stair and re-cuts the floor openings so sight and light follow the stairwell that is actually in use.
+
 Problems are listed under the level they belong to; **Fix** or **Fix all** repairs them. **Undo** and **Revert** reverse Floorer's changes for the current scene view.
 
 ## Settings

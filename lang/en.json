@@ -103,6 +103,9 @@
       "DeleteStairTitle": "Delete stair",
       "DeleteHoleTitle": "Delete hole",
       "Tip": {
+        "States": "Scene states: give stairs a different destination per state, e.g. an airship's rotations",
+        "StateSwitch": "Switch the active scene state",
+        "Variants": "Set this stair's destination for each scene state",
         "Footprint": "The floor of this level. Draw its outline; Floorer creates a Define Surface region that blocks sight, light and movement between floors, tagged to every level that can see it.",
         "FootprintPolygon": "Draw the floor outline as a polygon",
         "FootprintRect": "Draw the floor outline as a rectangle",
@@ -163,11 +166,49 @@
       "level-gap": "Gap below this level",
       "level-overlap-with": "Overlaps {levels} — fine when the levels don't share floor space (e.g. a cellar under open ground)"
     },
+    "States": {
+      "Title": "Scene states",
+      "Hint": "A scene state is one configuration of the scene. Stairs can lead somewhere different in each state, so the same map serves an airship upright, rolled to port or docked.",
+      "Empty": "No states yet. Add one to give stairs a per-state destination.",
+      "Add": "Add state",
+      "AddPlaceholder": "New state name",
+      "Delete": "Delete this state",
+      "DeleteTitle": "Delete scene state",
+      "ConfirmDelete": "Delete this state and the stair destinations that belong to it?",
+      "Tip": {
+        "Active": "Make this the active state",
+        "Name": "State name"
+      }
+    },
+    "Variants": {
+      "Title": "Stair destinations per state",
+      "Hint": "Where {stair} leads in each scene state.",
+      "NoStates": "This scene has no states yet. Add one from the panel header first.",
+      "SceneHint": "Picking another scene copies this stair's own shape into that scene as a landing region, so tokens arrive on the matching spot.",
+      "Kind": {
+        "off": "Off",
+        "level": "Level",
+        "scene": "Another scene"
+      },
+      "Placement": {
+        "center": "Center",
+        "relative": "Relative",
+        "random": "Random"
+      },
+      "Tip": {
+        "Kind": "What this stair does in this state",
+        "Level": "Level in this scene the stair leads to",
+        "Scene": "Scene the stair teleports to",
+        "SceneLevel": "Level in the destination scene",
+        "Placement": "Where the token lands inside the landing region"
+      }
+    },
     "Api": {
       "GMOnly": "Only a GM can change the Floorer scene state."
     },
     "Common": {
-      "Cancel": "Cancel"
+      "Cancel": "Cancel",
+      "Close": "Close"
     }
   }
 }

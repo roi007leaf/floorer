@@ -1,0 +1,37 @@
+<div class="floorer-variants-body">
+  <p class="hint">{{localize "FLOORER.Variants.Hint" stair=stairName}}</p>
+  {{#if rows.length}}
+  <ul class="variant-rows">
+    {{#each rows}}
+    <li class="variant-row" data-state-id="{{stateId}}">
+      <span class="state-name">{{name}}</span>
+      <select name="kind" data-tooltip="{{localize 'FLOORER.Variants.Tip.Kind'}}">
+        {{#each kinds}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{localize label}}</option>{{/each}}
+      </select>
+      {{#if isLevel}}
+      <select name="level" data-tooltip="{{localize 'FLOORER.Variants.Tip.Level'}}">
+        {{#each levels}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+      </select>
+      {{/if}}
+      {{#if isScene}}
+      <select name="scene" data-tooltip="{{localize 'FLOORER.Variants.Tip.Scene'}}">
+        {{#each scenes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+      </select>
+      <select name="sceneLevel" data-tooltip="{{localize 'FLOORER.Variants.Tip.SceneLevel'}}">
+        {{#each sceneLevels}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+      </select>
+      <select name="placement" data-tooltip="{{localize 'FLOORER.Variants.Tip.Placement'}}">
+        {{#each placements}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{localize label}}</option>{{/each}}
+      </select>
+      {{/if}}
+    </li>
+    {{/each}}
+  </ul>
+  <p class="hint arrival">{{localize "FLOORER.Variants.SceneHint"}}</p>
+  {{else}}
+  <p class="empty">{{localize "FLOORER.Variants.NoStates"}}</p>
+  {{/if}}
+  <footer class="form-footer">
+    <button type="button" data-action="cancel">{{localize "FLOORER.Common.Close"}}</button>
+  </footer>
+</div>
